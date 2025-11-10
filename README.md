@@ -1,8 +1,8 @@
 # splice-playground
-**Gachon University — Department of AI·Software**  
-**Capstone Project (Graduation Project)**  
-**AI Section 1, Team 4**  
-**2025–2026**
+- Institution: Gachon University, Department of AI–Software
+- Project: Capstone Project (Graduation Project)
+- Team: AI Section 1, Team 4
+- Timeline: 2025–2026
 
 ## Team Members
 | Name |      Role       | Github | Email |
