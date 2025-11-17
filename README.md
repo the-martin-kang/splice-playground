@@ -6,7 +6,7 @@
 
 ## Team Members
 | Name |      Role       | Github | Email |
-| :--: | :-------------: | :----- | :---- |
+| :--: | :-------------: | :-----: | :----: |
 | 강민준  |       AI        |        |    mintory20@gachon.ac.kr   |
 | 김현우  |       AI        |        |       |
 | 남윤정  | frontend, UX&UI |        |       |
