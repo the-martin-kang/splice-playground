@@ -2,7 +2,7 @@
 - Institution: Gachon University, Department of AI–Software
 - Project: Capstone Project (Graduation Project)
 - Team: AI Section 1, Team 4
-- Timeline: 2025–2026
+- Timeline: 2025.9–2026.7
 
 ## Team Members
 | Name |      Role       | Github | Email |
