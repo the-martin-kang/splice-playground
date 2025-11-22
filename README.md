@@ -8,10 +8,10 @@
 | Name |      Role       | Github | Email |
 | :--: | :-------------: | :-----: | :----: |
 | 강민준  |       AI        |        |    mintory20@gachon.ac.kr   |
-| 김현우  |       AI        |        |       |
+| 김현우  |               |        |       |
 | 남윤정  | frontend, UX&UI |        |       |
 | 이정균  |     backend     |        |       |
-| 최진범  |       AI        |        |       |
+| 최진범  |               |        |       |
 
 
 ## Overview
