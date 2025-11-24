@@ -15,6 +15,7 @@
 
 
 ## Overview
+```
 splice-playground/
 │
 ├─ frontend/                 # Next.js (화면)
@@ -52,3 +53,4 @@ splice-playground/
 ├─ docker-compose.yml        # 로컬에서 한번에 돌릴 때
 ├─ .gitignore
 └─ README.md
+```
