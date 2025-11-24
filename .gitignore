@@ -1,0 +1,121 @@
+########################################
+# root (monorepo) .gitignore
+########################################
+
+# --- OS / system ---
+.DS_Store
+.DS_Store?
+Thumbs.db
+
+# --- editors / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- environment / secrets ---
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# --- logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+uvicorn.log
+gunicorn.log
+
+########################################
+# frontend (Next.js / Node)
+########################################
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/.turbo/
+frontend/.vercel/
+frontend/.cache/
+frontend/coverage/
+
+# build artifacts
+*.tsbuildinfo
+
+########################################
+# backend (FastAPI / Python)
+########################################
+backend/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.venv/
+backend/venv/
+backend/env/
+
+# packaging
+backend/build/
+backend/dist/
+backend/*.egg-info/
+
+########################################
+# docker
+########################################
+**/.docker/
+docker-data/
+*.pid
+
+########################################
+# data / bioinformatics big files
+########################################
+data/
+backend/data/
+frontend/data/
+*.fasta
+*.fa
+*.fna
+*.ffn
+*.faa
+*.fastq
+*.fq
+*.gtf
+*.gff
+*.gff3
+*.bed
+*.bam
+*.sam
+*.vcf
+*.bcf
+*.bigwig
+*.bw
+*.wig
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+*.csv
+*.tsv
+*.parquet
+*.pkl
+*.pickle
+*.joblib
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+
+########################################
+# misc
+########################################
+tmp/
+temp/
+cache/
