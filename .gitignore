@@ -1,5 +1,10 @@
 ########################################
 # root (monorepo) .gitignore
+# 프로젝트 구조:
+#   frontend/  (Next.js)
+#   backend/   (FastAPI + uv)
+#   scripts/   (전처리/연구용 uv)
+#   shared/    (공통 라이브러리 uv)
 ########################################
 
 # --- OS / system ---
@@ -45,23 +50,32 @@ frontend/coverage/
 *.tsbuildinfo
 
 ########################################
-# backend (FastAPI / Python)
+# Python 공통 (backend / scripts / shared)
 ########################################
-backend/__pycache__/
-backend/**/*.py[cod]
-backend/.pytest_cache/
-backend/.mypy_cache/
-backend/.ruff_cache/
-backend/.coverage
-backend/htmlcov/
-backend/.venv/
-backend/venv/
-backend/env/
 
-# packaging
-backend/build/
-backend/dist/
-backend/*.egg-info/
+# 캐시/빌드
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/.coverage.*
+**/htmlcov/
+**/.hypothesis/
+
+# 가상환경
+**/.venv/
+**/venv/
+**/env/
+
+# 빌드 산출물
+**/build/
+**/dist/
+**/*.egg-info/
+
+# uv / 기타
+.python-version
 
 ########################################
 # docker
@@ -72,10 +86,14 @@ docker-data/
 
 ########################################
 # data / bioinformatics big files
+#   - 실제 원본 데이터는 git에 올리지 않고
+#   - scripts/나 backend/에서 스크립트로 다운로드해서 쓰는 용도
 ########################################
 data/
 backend/data/
-frontend/data/
+scripts/data/
+shared/data/
+
 *.fasta
 *.fa
 *.fna
@@ -89,11 +107,13 @@ frontend/data/
 *.bed
 *.bam
 *.sam
+*.cram
 *.vcf
 *.bcf
 *.bigwig
 *.bw
 *.wig
+
 *.h5
 *.hdf5
 *.pt
@@ -101,12 +121,14 @@ frontend/data/
 *.ckpt
 *.npz
 *.npy
-*.csv
-*.tsv
-*.parquet
 *.pkl
 *.pickle
 *.joblib
+
+*.csv
+*.tsv
+*.parquet
+
 *.zip
 *.tar
 *.tar.gz

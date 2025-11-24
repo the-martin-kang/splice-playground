@@ -15,39 +15,31 @@
 
 
 ## Overview
+- 프론트 : next.js → vercel에 배포(호스팅)
+- 백엔드 : fastapi → AWS에 Docker로
+- DB : supabase
 ```
-splice-playground/
-│
-├─ frontend/                 # Next.js (화면)
-│   ├─ app/ or pages/
-│   ├─ components/
-│   ├─ public/
+splice-playground/        # GitHub 레포 하나
+├─ frontend/              # Next.js (Vercel이 보는 폴더)
 │   ├─ package.json
-│   └─ next.config.js
+│   ├─ next.config.mjs
+│   └─ ...
 │
-├─ backend/                  # FastAPI (서버)
+├─ backend/               # FastAPI + uv + Docker
+│   ├─ pyproject.toml
+│   ├─ uv.lock
 │   ├─ app/
-│   │   ├─ main.py
-│   │   ├─ api/             # 라우터(주소)
-│   │   ├─ services/        # 로직(SpliceAI 호출 등)
-│   │   ├─ models/          # DB/데이터 모델
-│   │   └─ core/            # 설정, utils
-│   ├─ requirements.txt or pyproject.toml
 │   └─ Dockerfile
 │
-├─ shared/                   # 프론트/백엔드가 같이 쓰는 것
-│   ├─ types/               # 공통 타입/스키마
-│   └─ constants/
+├─ scripts/               # 데이터 전처리/연구용 uv 프로젝트
+│   ├─ pyproject.toml
+│   └─ preprocess_*.py
 │
-├─ docs/                     # 문서(설명, 설계, 회의록)
-│   ├─ architecture.md
-│   ├─ api_spec.md
-│   └─ roadmap.md
+├─ shared/                # backend & scripts에서 같이 쓸 라이브러리 (나중에)
+│   ├─ pyproject.toml
+│   └─ src/splice_shared/
 │
-├─ scripts/                  # 데이터 전처리/실험용 스크립트
-│   └─ preprocess_ensembl.py
-│
-├─ data/                  # FASTA data
+├─ data/                  # FASTA data(미정..)
 │   └─
 │
 ├─ docker-compose.yml        # 로컬에서 한번에 돌릴 때
