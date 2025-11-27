@@ -8,17 +8,17 @@
 | Name |      Role       | Student ID |               Github               |        Email         |
 | :--: | :-------------: | :--------: | :--------------------------------: | :------------------: |
 | 강민준  | AI<br>Team Leader | 202434712  | https://github.com/the-martin-kang | joontory20@naver.com |
-| 최진범  |     frontend     | 202239882  |                                    | cjb2030@gachon.ac.kr |
+| 최진범  |     frontend     | 202239882  | https://github.com/Choijinbum | cjb2030@gachon.ac.kr |
 | 남윤정  |    frontend     | 202334455  |                                    |  namyj26@naver.com   |
 | 이정균  |     backend     | 202135814  | https://github.com/Junggyun827 | jungun0827@gmail.com |
 | 김현우  |    backend     | 202239868  | https://github.com/hyunw0000  | lukert@gachon.ac.kr  |
-
 
 
 ## Overview
 - 프론트 : next.js → vercel에 배포(호스팅)
 - 백엔드 : fastapi → AWS에 Docker로
 - DB : supabase
+
 ```
 splice-playground/        # GitHub 레포 하나
 ├─ frontend/              # Next.js (Vercel이 보는 폴더)
