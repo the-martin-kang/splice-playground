@@ -6,7 +6,7 @@
 
 ## Team Members
 | Name |      Role       | Student ID |               Github               |        Email         |
-| :--: | :-------------: | :--------: | :--------------------------------: | :------------------: |
+| 최진범  |    frontend       | 202239882 | https://github.com/Choijinbum | cjb2030@gachon.ac.kr |
 | 강민준  | AI<br>Team Leader | 202434712  | https://github.com/the-martin-kang | joontory20@naver.com |
 | 남윤정  |    frontend     | 202334455  |                                    |  namyj26@naver.com   |
 | 이정균  |     backend     | 202135814  | https://github.com/Junggyun827 | jungun0827@gmail.com |
