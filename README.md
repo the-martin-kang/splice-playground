@@ -40,7 +40,7 @@ splice-playground/        # GitHub 레포 하나
 │   ├─ pyproject.toml
 │   └─ src/splice_shared/
 │
-├─ data/                  # FASTA data(미정..)
+├─ data/                  # FASTA, GTF data(실제 데이터는 전처리 코드에서 링크로만 첨부)
 │   └─
 │
 ├─ docker-compose.yml        # 로컬에서 한번에 돌릴 때
