@@ -21,6 +21,8 @@ Thumbs.db
 # --- environment / secrets ---
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 !.env.sample
 
@@ -93,6 +95,7 @@ data/
 backend/data/
 scripts/data/
 shared/data/
+scrpts/src/private
 
 *.fasta
 *.fa
