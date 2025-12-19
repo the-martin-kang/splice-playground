@@ -3,6 +3,12 @@
 - Project: Capstone Project (Graduation Project)
 - Team: AI Section 1, Team 4
 - Timeline: 2025.9–2026.7
+- Idea: https://youtu.be/jHdRVvbMIxs
+
+## User Interface
+<img width="10799" height="6728" alt="Image" src="https://github.com/user-attachments/assets/73f9ad0f-6957-40f3-836d-355cd7cc67f0" />
+<img width="7024" height="1926" alt="Image" src="https://github.com/user-attachments/assets/a3eb2ccf-d59d-4e7d-b063-dfa18a995cfd" />
+<img width="7656" height="1947" alt="Image" src="https://github.com/user-attachments/assets/43ee55ca-91cb-4604-81b7-9d3309eb0fc1" />
 
 ## Team Members
 | Name |       Role        | Student ID |               Github               |        Email         |
@@ -18,6 +24,77 @@
 - 프론트 : next.js → vercel에 배포(호스팅)
 - 백엔드 : fastapi → AWS에 Docker로
 - DB : supabase
+
+### DB tables
+
+```mermaid
+erDiagram
+  users ||--o{ predictions : "makes"
+  diseases ||--o{ genes : "mainly in"
+  genes ||--o{ transcripts : "has"
+  transcripts ||--o{ exons : "has"
+  transcripts ||--o{ variants : "annotated on"
+  variants ||--o{ predictions : "has"
+
+  users {
+    uuid id
+    text nickname
+  }
+
+  diseases {
+    uuid id
+    text name
+    text code
+    text description
+    text main_gene_symbol
+  }
+
+  genes {
+    uuid id
+    text symbol
+    text ensembl_id
+    text chromosome
+    text strand
+  }
+
+  transcripts {
+    uuid id
+    uuid gene_id
+    text ensembl_id
+    boolean is_canonical
+  }
+
+  exons {
+    uuid id
+    uuid transcript_id
+    integer exon_number
+    integer genomic_start
+    integer genomic_end
+    text strand
+  }
+
+  variants {
+    uuid id
+    uuid transcript_id
+    text chrom
+    integer pos
+    text ref
+    text alt
+    text type
+  }
+
+  predictions {
+    uuid id
+    uuid variant_id
+    uuid user_id
+    text model_name
+    text model_version
+    float delta_psi
+    jsonb raw_output
+  }
+```
+
+### Github repo
 
 ```
 splice-playground/        # GitHub 레포 하나
@@ -47,3 +124,13 @@ splice-playground/        # GitHub 레포 하나
 ├─ .gitignore
 └─ README.md
 ```
+
+### Reference
+1. Jaganathan K, Kyriazopoulou Panagiotopoulou S, McRae JF, _et al._ Predicting Splicing from Primary Sequence with Deep Learning. _Cell_ **176(3),** 535-548.e24. (2019). [https://doi.org/10.1016/j.cell.2018.12.015](https://doi.org/10.1016/j.cell.2018.12.015)
+2. Avsec, Ž., _et al._ AlphaGenome: advancing regulatory variant effect prediction with a unified DNA sequence model. _bioRxiv_ **20,** 25-06 (2025). [https://doi.org/10.1101/2025.06.25.661532](https://doi.org/10.1101/2025.06.25.661532)
+3. Jumper, J., Evans, R., Pritzel, A. et al. Highly accurate protein structure prediction with AlphaFold. _Nature_ **596**, 583–589 (2021). [https://doi.org/10.1038/s41586-021-03819-2](https://doi.org/10.1038/s41586-021-03819-2)
+4. Mirdita, M., Schütze, K., Moriwaki, Y. et al. ColabFold: making protein folding accessible to all. _Nat Methods_ **19**, 679–682 (2022). [https://doi.org/10.1038/s41592-022-01488-1](https://doi.org/10.1038/s41592-022-01488-1)
+5. Illumina. SpliceAI (GitHub repository). https://github.com/Illumina/SpliceAI
+6. Google DeepMind. AlphaFold v2 inference pipeline (GitHub repository). https://github.com/google-deepmind/alphafold
+7. Mirdita, M. (sokrypton). ColabFold (GitHub repository). https://github.com/sokrypton/ColabFold
+8. Google DeepMind. AlphaFold 3 inference pipeline (GitHub repository).  https://github.com/google-deepmind/alphafold3
