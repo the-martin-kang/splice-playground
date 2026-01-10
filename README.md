@@ -29,69 +29,102 @@
 
 ```mermaid
 erDiagram
-  users ||--o{ predictions : "makes"
-  diseases ||--o{ genes : "mainly in"
-  genes ||--o{ transcripts : "has"
-  transcripts ||--o{ exons : "has"
-  transcripts ||--o{ variants : "annotated on"
-  variants ||--o{ predictions : "has"
+  erDiagram
+    GENE {
+        TEXT gene_id PK
+        TEXT gene_symbol
+        TEXT chromosome
+        CHAR strand
+        INT start_pos
+        INT end_pos
+    }
 
-  users {
-    uuid id
-    text nickname
-  }
+    REGION {
+        BIGINT region_id PK
+        TEXT gene_id FK
+        TEXT region_type
+        INT region_number
+        INT start_pos
+        INT end_pos
+        INT phase
+        INT length
+    }
 
-  diseases {
-    uuid id
-    text name
-    text code
-    text description
-    text main_gene_symbol
-  }
+    NUCLEOTIDE_SEQUENCE {
+        BIGINT region_id PK, FK
+        TEXT sequence
+        INT length
+    }
 
-  genes {
-    uuid id
-    text symbol
-    text ensembl_id
-    text chromosome
-    text strand
-  }
+    DISEASE {
+        TEXT disease_id PK
+        TEXT disease_name
+        TEXT inheritance
+        TEXT description
+    }
 
-  transcripts {
-    uuid id
-    uuid gene_id
-    text ensembl_id
-    boolean is_canonical
-  }
+    GENE_DISEASE {
+        BIGINT gene_disease_id PK
+        TEXT gene_id FK
+        TEXT disease_id FK
+        TEXT role
+        TEXT evidence_level
+    }
 
-  exons {
-    uuid id
-    uuid transcript_id
-    integer exon_number
-    integer genomic_start
-    integer genomic_end
-    text strand
-  }
+    BASELINE_SEQUENCE_STATE {
+        UUID baseline_id PK
+        TEXT gene_id FK
+        TEXT disease_id FK
+        TEXT description
+    }
 
-  variants {
-    uuid id
-    uuid transcript_id
-    text chrom
-    integer pos
-    text ref
-    text alt
-    text type
-  }
+    BASELINE_RESULT {
+        BIGINT baseline_result_id PK
+        UUID baseline_id FK
+        TEXT step
+        TEXT model_version
+        JSONB result_payload
+    }
 
-  predictions {
-    uuid id
-    uuid variant_id
-    uuid user_id
-    text model_name
-    text model_version
-    float delta_psi
-    jsonb raw_output
-  }
+    PLAYGROUND_SEED {
+        UUID seed_id PK
+        TEXT gene_id FK
+        TEXT disease_id FK
+        JSONB seed_variants
+        TEXT description
+    }
+
+    USER_SEQUENCE_STATE {
+        UUID state_id PK
+        UUID seed_id FK
+        UUID parent_state_id FK
+        JSONB applied_edit
+        TEXT description
+    }
+
+    USER_STATE_RESULT {
+        UUID user_result_id PK
+        UUID state_id FK
+        TEXT step
+        BIGINT reference_baseline_result_id FK
+        JSONB result_payload
+        JSONB delta_payload
+    }
+
+    GENE ||--o{ REGION : has
+    REGION ||--|| NUCLEOTIDE_SEQUENCE : has
+
+    GENE ||--o{ GENE_DISEASE : involved_in
+    DISEASE ||--o{ GENE_DISEASE : associated_with
+
+    GENE ||--|| BASELINE_SEQUENCE_STATE : has
+    BASELINE_SEQUENCE_STATE ||--o{ BASELINE_RESULT : produces
+
+    GENE ||--o{ PLAYGROUND_SEED : seeds
+    PLAYGROUND_SEED ||--o{ USER_SEQUENCE_STATE : spawns
+    USER_SEQUENCE_STATE ||--o{ USER_STATE_RESULT : yields
+
+    BASELINE_RESULT ||--o{ USER_STATE_RESULT : compared_to
 ```
 
 ### Github repo
