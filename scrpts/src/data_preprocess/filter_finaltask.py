@@ -1,16 +1,3 @@
-# def main():
-#     import pandas as pd
-#     p = "/Users/martin/Git/splice-playground/scrpts/data/refannotation_with_canonical.tsv"
-#     df = pd.read_csv(p, sep="\t")
-#     targets = {"SMN1", "SMN2", "MSH2", "CFTR", "DNM1", "TSC2", "PMM2"}
-#     sub = df[df["NAME"].isin(targets)][
-#         ["NAME", "canonical_transcript_id", "canonical_source", "canonical_exon_numbers"]]
-#     print(sub.to_string(index=False))
-#
-#
-# if __name__ == "__main__":
-#     main()
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -18,7 +5,7 @@ import argparse
 import pandas as pd
 
 ANSWER_INDEX = {2, 8, 10, 16, 17, 21, 26, 34, 37, 38}  # 0-base
-TARGET_GENES = {"MSH2", "CFTR", "DNM1", "TSC2", "PMM2"}  # SMN1/SMN2 제외
+TARGET_GENES = {"MSH2", "CFTR", "DNM1", "TSC2", "PMM2"}  # finaltask에서 사용할 gene
 
 def main():
     ap = argparse.ArgumentParser()
@@ -32,25 +19,29 @@ def main():
 
     df = pd.read_csv(args.in_tsv, sep="\t")
 
-    # 필수 컬럼 체크
     required_cols = {"answer_index", "gene"}
     missing = required_cols - set(df.columns)
     if missing:
         raise SystemExit(f"Missing required columns: {sorted(missing)}")
 
-    # 타입 정리
     df["answer_index"] = pd.to_numeric(df["answer_index"], errors="coerce").astype("Int64")
     df["gene"] = df["gene"].astype(str).str.strip()
 
-    # 필터: 정답 인덱스 + 타깃 유전자
     out = df[df["answer_index"].isin(ANSWER_INDEX) & df["gene"].isin(genes)].copy()
 
-    # 정렬 (보기 편하게)
-    out = out.sort_values(["gene", "answer_index"]).reset_index(drop=True)
+    # answer_index 컬럼 제거
+    out = out.drop(columns=["answer_index"])
+
+    # 보기 편하게 정렬(가능하면 gene/pos 기준)
+    sort_cols = [c for c in ["gene", "pos"] if c in out.columns]
+    if sort_cols:
+        out = out.sort_values(sort_cols).reset_index(drop=True)
+    else:
+        out = out.reset_index(drop=True)
 
     out.to_csv(args.out_tsv, sep="\t", index=False)
     print(f"[OK] Wrote {len(out)} rows -> {args.out_tsv}")
-    print(out[["answer_index", "gene"]].to_string(index=False))
+    print(out[["gene"]].value_counts().to_string())
 
 if __name__ == "__main__":
     main()

@@ -11,14 +11,14 @@
 <img width="7656" height="1947" alt="Image" src="https://github.com/user-attachments/assets/43ee55ca-91cb-4604-81b7-9d3309eb0fc1" />
 
 ## Team Members
-| Name |       Role        | Student ID |               Github               |        Email         |
-| :--: | :---------------: | :--------: | :--------------------------------: | :------------------: |
-| 강민준  | AI<br>Team Leader | 202434712  | https://github.com/the-martin-kang | joontory20@naver.com |
-| 김현우  |      backedn      | 202239868  |    https://github.com/hyunw0000    | lukert@gachon.ac.kr  |
-| 남윤정  |     frontend      | 202334455  |   https://github.com/Southernyj    |  namyj26@naver.com   |
-| 이정균  |      backend      | 202135814  |   https://github.com/Junggyun827   | jungun0827@gmail.com |
-| 최진범  |     frontend      | 202239882  |   https://github.com/Choijinbum    | cjb2030@gachon.ac.kr |
-
+| Name |         Role          | Student ID |               Github               |        Email         |
+| :--: | :-------------------: | :--------: | :--------------------------------: | :------------------: |
+| 강민준  | AI, DB<br>Team Leader | 202434712  | https://github.com/the-martin-kang | joontory20@naver.com |
+| 김현우  |     presentation      | 202239868  |    https://github.com/hyunw0000    | lukert@gachon.ac.kr  |
+| 남윤정  |       frontend        | 202334455  |   https://github.com/Southernyj    |  namyj26@naver.com   |
+| 이정균  |        backend        | 202135814  |   https://github.com/Junggyun827   | jungun0827@gmail.com |
+| 최진범  |       frontend        | 202239882  |   https://github.com/Choijinbum    | cjb2030@gachon.ac.kr |
+ 
 
 ## Overview
 - 프론트 : next.js → vercel에 배포(호스팅)
