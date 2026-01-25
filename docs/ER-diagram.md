@@ -20,8 +20,8 @@ erDiagram
     }
 
     DISEASE_GENE {
-        TEXT disease_id FK
-        TEXT gene_id FK
+        TEXT disease_id PK, FK
+        TEXT gene_id PK, FK
     }
 
     DISEASE_REPRESENTATIVE_SNV {
@@ -47,15 +47,15 @@ erDiagram
     }
 
     BASELINE_RESULT {
-        TEXT gene_id FK
-        TEXT step
+        TEXT gene_id PK, FK
+        TEXT step PK
         TEXT model_version
         JSONB result_payload
     }
 
     SNV_RESULT {
-        TEXT disease_id FK
-        TEXT step
+        TEXT disease_id PK, FK
+        TEXT step PK
         TEXT model_version
         JSONB result_payload
         JSONB delta_payload
@@ -70,24 +70,39 @@ erDiagram
     }
 
     USER_STATE_RESULT {
-        UUID state_id FK
-        TEXT step
+        UUID state_id PK, FK
+        TEXT step PK
         TEXT model_version
         JSONB result_payload
         JSONB delta_payload
     }
 
-    DISEASE ||--o{ DISEASE_GENE : links
-    GENE ||--o{ DISEASE_GENE : links
-
-    DISEASE ||--|| DISEASE_REPRESENTATIVE_SNV : has
-    GENE ||--o{ DISEASE_REPRESENTATIVE_SNV : contains
+    STRUCTURE_JOB {
+        UUID job_id PK
+        UUID state_id FK
+        TEXT provider
+        TEXT status
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+        TEXT external_job_id
+        JSONB result_payload
+        TEXT error_message
+    }
 
     GENE ||--o{ REGION : has
 
-    GENE ||--o{ BASELINE_RESULT : produces
-    DISEASE ||--o{ SNV_RESULT : produces
+    DISEASE ||--o{ DISEASE_GENE : maps
+    GENE ||--o{ DISEASE_GENE : maps
+
+    DISEASE ||--|| DISEASE_REPRESENTATIVE_SNV : has
+    GENE ||--o{ DISEASE_REPRESENTATIVE_SNV : caused_by
+
+    GENE ||--o{ BASELINE_RESULT : caches
+    DISEASE ||--o{ SNV_RESULT : caches
 
     DISEASE ||--o{ USER_STATE : spawns
-    USER_STATE ||--o{ USER_STATE_RESULT : yields
+    USER_STATE ||--o{ USER_STATE : derives
+    USER_STATE ||--o{ USER_STATE_RESULT : caches
+
+    USER_STATE ||--o{ STRUCTURE_JOB : runs
 ```
