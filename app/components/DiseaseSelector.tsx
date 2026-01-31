@@ -1,13 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-
-interface Disease {
-  disease_id: string;
-  disease_name: string;
-  image_url?: string;
-}
 
 interface DiseaseDetail {
   disease: {
@@ -31,71 +25,68 @@ interface DiseaseDetail {
   };
 }
 
-// 이미지 매핑 (public/images 폴더의 이미지)
-const DISEASE_IMAGES: { [key: string]: string } = {
-  'CFTR_seed': '/images/CFTR.jpeg',
-  'DNM1_seed': '/images/DNM1.png',
-  'MSH2_seed': '/images/MSH2.png',
-  'PMM2_seed': '/images/PMM2.png',
-  'SMN_seed': '/images/SMN_SMA.png',
-  'TSC2_seed': '/images/TSC2.png',
-};
+// 질병 목록 (하드코딩 — API 없이 화면에 바로 표시)
+const DISEASE_LIST = [
+  {
+    disease_id: 'CFTR_seed',
+    disease_name: 'Cystic Fibrosis (CFTR)',
+    image_url: '/images/CFTR.jpeg',
+  },
+  {
+    disease_id: 'DNM1_seed',
+    disease_name: 'Epileptic Encephalopathy (DNM1)',
+    image_url: '/images/DNM1.png',
+  },
+  {
+    disease_id: 'MSH2_seed',
+    disease_name: 'Lynch Syndrome (MSH2)',
+    image_url: '/images/MSH2.png',
+  },
+  {
+    disease_id: 'PMM2_seed',
+    disease_name: 'CDG Syndrome (PMM2)',
+    image_url: '/images/PMM2.png',
+  },
+  {
+    disease_id: 'SMN_seed',
+    disease_name: 'Spinal Muscular Atrophy (SMN)',
+    image_url: '/images/SMN_SMA.png',
+  },
+  {
+    disease_id: 'TSC2_seed',
+    disease_name: 'Tuberous Sclerosis (TSC2)',
+    image_url: '/images/TSC2.png',
+  },
+];
 
 // FastAPI URL (환경 변수에서 읽음)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function DiseaseSelector() {
-  const [diseases, setDiseases] = useState<Disease[]>([]);
-  const [selectedDisease, setSelectedDisease] = useState<Disease | null>(null);
+  const [selectedDiseaseId, setSelectedDiseaseId] = useState<string | null>(null);
   const [diseaseDetail, setDiseaseDetail] = useState<DiseaseDetail | null>(null);
-  const [isListLoading, setIsListLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1-1) 질병 목록 조회 (FastAPI)
-  useEffect(() => {
-    const fetchDiseases = async () => {
-      setIsListLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/diseases`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setDiseases(data.items || []);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : '질병 목록을 불러올 수 없습니다';
-        setError(errorMessage);
-        console.error('Error fetching diseases:', err);
-      } finally {
-        setIsListLoading(false);
-      }
-    };
-
-    fetchDiseases();
-  }, []);
-
-  // 1-2) 질병 상세 조회 (FastAPI)
-  const handleSelectDisease = async (disease: Disease) => {
-    setSelectedDisease(disease);
+  // 클릭 시에만 API 호출 — 1-2) 질병 상세 조회
+  const handleSelectDisease = async (diseaseId: string) => {
+    setSelectedDiseaseId(diseaseId);
     setDiseaseDetail(null);
     setIsDetailLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/diseases/${disease.disease_id}`);
-      
+      const response = await fetch(`${API_BASE_URL}/api/diseases/${diseaseId}`);
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setDiseaseDetail(data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '질병 상세 정보를 불러올 수 없습니다';
+      const errorMessage =
+        err instanceof Error ? err.message : '질병 상세 정보를 불러올 수 없습니다';
       setError(errorMessage);
       console.error('Error fetching disease details:', err);
     } finally {
@@ -103,10 +94,16 @@ export default function DiseaseSelector() {
     }
   };
 
+  const handleCloseModal = () => {
+    setSelectedDiseaseId(null);
+    setDiseaseDetail(null);
+    setError(null);
+  };
+
   const handleNextStep = () => {
-    if (selectedDisease && diseaseDetail) {
+    if (selectedDiseaseId && diseaseDetail) {
       // Step 2로 데이터 전달
-      console.log('다음 단계로 진행:', selectedDisease, diseaseDetail);
+      console.log('다음 단계로 진행:', selectedDiseaseId, diseaseDetail);
       // 나중에: router.push('/step2') 또는 Context API로 상태 전달
     }
   };
@@ -119,68 +116,44 @@ export default function DiseaseSelector() {
           <h1 className="text-5xl font-bold text-black mb-2">1. Select Mutant</h1>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-100 border border-red-400 rounded-lg p-4">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
-
         {/* Main Container */}
         <div className="border-4 border-black rounded-3xl p-8 bg-white">
-          {/* Disease Grid */}
-          {isListLoading ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
-                <p className="mt-4 text-black font-semibold">질병 목록 로딩 중...</p>
-              </div>
-            </div>
-          ) : diseases.length === 0 ? (
-            <div className="flex items-center justify-center h-96">
-              <p className="text-black text-lg">질병 목록을 불러올 수 없습니다</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-6 mb-8">
-              {diseases.map((disease) => (
-                <button
-                  key={disease.disease_id}
-                  onClick={() => handleSelectDisease(disease)}
-                  className={`border-4 rounded-2xl p-6 transition-all duration-200 flex flex-col items-center justify-center min-h-64 ${
-                    selectedDisease?.disease_id === disease.disease_id
-                      ? 'border-black bg-gray-50'
-                      : 'border-black hover:bg-gray-50'
-                  }`}
-                >
-                  {/* Image Area */}
-                  <div className="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
-                    <Image
-                      src={DISEASE_IMAGES[disease.disease_id] || '/images/default.jpg'}
-                      alt={disease.disease_name}
-                      width={200}
-                      height={160}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+          {/* Disease Grid — 하드코딩된 목록을 바로 렌더링 */}
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            {DISEASE_LIST.map((disease) => (
+              <button
+                key={disease.disease_id}
+                onClick={() => handleSelectDisease(disease.disease_id)}
+                className={`border-4 rounded-2xl p-6 transition-all duration-200 flex flex-col items-center justify-center min-h-64 ${
+                  selectedDiseaseId === disease.disease_id
+                    ? 'border-black bg-gray-50'
+                    : 'border-black hover:bg-gray-50'
+                }`}
+              >
+                {/* Image Area */}
+                <div className="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+                  <Image
+                    src={disease.image_url}
+                    alt={disease.disease_name}
+                    width={200}
+                    height={160}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
 
-                  {/* Title */}
-                  <p className="text-center font-semibold text-black text-sm">
-                    {disease.disease_name}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
+                {/* Title */}
+                <p className="text-center font-semibold text-black text-sm">
+                  {disease.disease_name}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Detail Modal */}
-        {selectedDisease && diseaseDetail && (
+        {/* Detail Modal — 클릭 후 API 응답 표시 */}
+        {selectedDiseaseId && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-2xl border-4 border-black max-w-2xl w-full p-8 max-h-96 overflow-y-auto">
-              <h2 className="text-3xl font-bold text-black mb-6">
-                {diseaseDetail.disease.disease_name}
-              </h2>
-
               {isDetailLoading ? (
                 <div className="flex items-center justify-center h-40">
                   <div className="text-center">
@@ -188,18 +161,34 @@ export default function DiseaseSelector() {
                     <p className="mt-2 text-black font-semibold">로딩 중...</p>
                   </div>
                 </div>
-              ) : (
+              ) : error ? (
+                <div className="text-center">
+                  <p className="text-red-600 mb-4">{error}</p>
+                  <button
+                    onClick={handleCloseModal}
+                    className="border-2 border-black rounded-lg px-6 py-2 font-bold text-black hover:bg-gray-100 transition"
+                  >
+                    닫기
+                  </button>
+                </div>
+              ) : diseaseDetail ? (
                 <>
+                  <h2 className="text-3xl font-bold text-black mb-6">
+                    {diseaseDetail.disease.disease_name}
+                  </h2>
+
                   {/* Disease Info */}
                   <div className="mb-6">
                     <h3 className="text-lg font-bold text-black mb-3">질병 정보</h3>
                     <div className="space-y-2 text-sm text-black">
                       <p>
-                        <span className="font-semibold">ID:</span> {diseaseDetail.disease.disease_id}
+                        <span className="font-semibold">ID:</span>{' '}
+                        {diseaseDetail.disease.disease_id}
                       </p>
                       {diseaseDetail.disease.description && (
                         <p>
-                          <span className="font-semibold">설명:</span> {diseaseDetail.disease.description}
+                          <span className="font-semibold">설명:</span>{' '}
+                          {diseaseDetail.disease.description}
                         </p>
                       )}
                     </div>
@@ -210,19 +199,24 @@ export default function DiseaseSelector() {
                     <h3 className="text-lg font-bold text-black mb-3">유전자 정보</h3>
                     <div className="space-y-2 text-sm text-black">
                       <p>
-                        <span className="font-semibold">기호:</span> {diseaseDetail.gene.gene_symbol}
+                        <span className="font-semibold">기호:</span>{' '}
+                        {diseaseDetail.gene.gene_symbol}
                       </p>
                       <p>
-                        <span className="font-semibold">염색체:</span> {diseaseDetail.gene.chromosome}
+                        <span className="font-semibold">염색체:</span>{' '}
+                        {diseaseDetail.gene.chromosome}
                       </p>
                       <p>
-                        <span className="font-semibold">Strand:</span> {diseaseDetail.gene.strand}
+                        <span className="font-semibold">Strand:</span>{' '}
+                        {diseaseDetail.gene.strand}
                       </p>
                       <p>
-                        <span className="font-semibold">길이:</span> {diseaseDetail.gene.length.toLocaleString()} bp
+                        <span className="font-semibold">길이:</span>{' '}
+                        {diseaseDetail.gene.length.toLocaleString()} bp
                       </p>
                       <p>
-                        <span className="font-semibold">Exon 수:</span> {diseaseDetail.gene.exon_count}
+                        <span className="font-semibold">Exon 수:</span>{' '}
+                        {diseaseDetail.gene.exon_count}
                       </p>
                     </div>
                   </div>
@@ -232,17 +226,21 @@ export default function DiseaseSelector() {
                     <h3 className="text-lg font-bold text-black mb-3">Seed SNV</h3>
                     <div className="space-y-2 text-sm text-black">
                       <p>
-                        <span className="font-semibold">위치 (Gene0):</span> {diseaseDetail.seed_snv.pos_gene0}
+                        <span className="font-semibold">위치 (Gene0):</span>{' '}
+                        {diseaseDetail.seed_snv.pos_gene0}
                       </p>
                       <p>
-                        <span className="font-semibold">Reference:</span> {diseaseDetail.seed_snv.ref}
+                        <span className="font-semibold">Reference:</span>{' '}
+                        {diseaseDetail.seed_snv.ref}
                       </p>
                       <p>
-                        <span className="font-semibold">Alternate:</span> {diseaseDetail.seed_snv.alt}
+                        <span className="font-semibold">Alternate:</span>{' '}
+                        {diseaseDetail.seed_snv.alt}
                       </p>
                       {diseaseDetail.seed_snv.note && (
                         <p>
-                          <span className="font-semibold">노트:</span> {diseaseDetail.seed_snv.note}
+                          <span className="font-semibold">노트:</span>{' '}
+                          {diseaseDetail.seed_snv.note}
                         </p>
                       )}
                     </div>
@@ -251,7 +249,7 @@ export default function DiseaseSelector() {
                   {/* Buttons */}
                   <div className="flex gap-4">
                     <button
-                      onClick={() => setSelectedDisease(null)}
+                      onClick={handleCloseModal}
                       className="flex-1 border-3 border-black rounded-lg py-2 font-bold text-black hover:bg-gray-100 transition"
                     >
                       닫기
@@ -264,7 +262,7 @@ export default function DiseaseSelector() {
                     </button>
                   </div>
                 </>
-              )}
+              ) : null}
             </div>
           </div>
         )}
