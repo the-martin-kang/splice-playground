@@ -1,0 +1,31 @@
+services:
+  backend:
+    build: ./backend          # backend/Dockerfile 기준으로 이미지 빌드
+    container_name: splice-backend
+    restart: unless-stopped
+    working_dir: /app
+    env_file:
+      - ./backend/.env        # 백엔드 환경변수 파일(있으면)
+    ports:
+      - "8000:8000"           # 호스트 8000 → 컨테이너 8000
+    # 필요하면 여기서도 환경변수 직접 넣을 수 있음
+    # environment:
+    #   - SUPABASE_URL=...
+    #   - SUPABASE_KEY=...
+
+  frontend:
+    image: node:20            # Next.js 개발용 Node 이미지
+    container_name: splice-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app       # 로컬 frontend 폴더를 컨테이너에 연결
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      # 필요하면 SUPABASE 관련 env도 추가
+      # - NEXT_PUBLIC_SUPABASE_URL=...
+      # - NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+    ports:
+      - "3000:3000"           # 호스트 3000 → 컨테이너 3000
+    depends_on:
+      - backend               # backend가 먼저 떠야 함

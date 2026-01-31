@@ -1,0 +1,74 @@
+# VCS
+.git
+.gitignore
+
+# Python 가상환경 / 캐시
+.venv
+venv
+env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.coverage
+htmlcov/
+
+# 로그 / 임시 파일
+*.log
+logs/
+tmp/
+temp/
+cache/
+
+# 데이터 (로컬용, 이미지에는 넣지 않음)
+data/
+*.fasta
+*.fa
+*.fna
+*.ffn
+*.faa
+*.fastq
+*.fq
+*.gtf
+*.gff
+*.gff3
+*.bed
+*.bam
+*.sam
+*.cram
+*.vcf
+*.bcf
+*.bigwig
+*.bw
+*.wig
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.joblib
+*.csv
+*.tsv
+*.parquet
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+
+# IDE / 편집기
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 기타 필요 없는 것들
+Dockerfile~

@@ -1,41 +1,146 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+########################################
+# root (monorepo) .gitignore
+# 프로젝트 구조:
+#   frontend/  (Next.js)
+#   backend/   (FastAPI + uv)
+#   scripts/   (전처리/연구용 uv)
+#   shared/    (공통 라이브러리 uv)
+########################################
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# --- OS / system ---
 .DS_Store
-*.pem
+.DS_Store?
+Thumbs.db
 
-# debug
+# --- editors / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- environment / secrets ---
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.sample
+
+# --- logs ---
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
+uvicorn.log
+gunicorn.log
 
-# env files (can opt-in for committing if needed)
-.env*
+########################################
+# frontend (Next.js / Node)
+########################################
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/.turbo/
+frontend/.vercel/
+frontend/.cache/
+frontend/coverage/
 
-# vercel
-.vercel
-
-# typescript
+# build artifacts
 *.tsbuildinfo
-next-env.d.ts
+
+########################################
+# Python 공통 (backend / scripts / shared)
+########################################
+
+# 캐시/빌드
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/.coverage.*
+**/htmlcov/
+**/.hypothesis/
+
+# 가상환경
+**/.venv/
+**/venv/
+**/env/
+
+# 빌드 산출물
+**/build/
+**/dist/
+**/*.egg-info/
+
+# uv / 기타
+.python-version
+
+########################################
+# docker
+########################################
+**/.docker/
+docker-data/
+*.pid
+
+########################################
+# data / bioinformatics big files
+#   - 실제 원본 데이터는 git에 올리지 않고
+#   - scripts/나 backend/에서 스크립트로 다운로드해서 쓰는 용도
+########################################
+data/
+backend/data/
+scripts/data/
+shared/data/
+scrpts/src/private
+
+*.fasta
+*.fa
+*.fna
+*.ffn
+*.faa
+*.fastq
+*.fq
+*.gtf
+*.gff
+*.gff3
+*.bed
+*.bam
+*.sam
+*.cram
+*.vcf
+*.bcf
+*.bigwig
+*.bw
+*.wig
+
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.joblib
+
+*.csv
+*.tsv
+*.parquet
+
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+
+########################################
+# misc
+########################################
+tmp/
+temp/
+cache/
