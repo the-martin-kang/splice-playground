@@ -59,8 +59,12 @@ const DISEASE_LIST = [
   },
 ];
 
-// FastAPI URL (환경 변수에서 읽음)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// ✅ FastAPI Base URL (환경 변수에서 읽음)
+// .env.local: NEXT_PUBLIC_API_BASE_URL=https://mmnamcwi3y.ap-northeast-1.awsapprunner.com
+const RAW_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+// 끝에 / 붙어도 안전하게
+const API_BASE_URL = RAW_BASE_URL.replace(/\/$/, '');
 
 export default function DiseaseSelector() {
   const [selectedDiseaseId, setSelectedDiseaseId] = useState<string | null>(null);
@@ -68,7 +72,7 @@ export default function DiseaseSelector() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 클릭 시에만 API 호출 — 1-2) 질병 상세 조회
+  // 클릭 시에만 API 호출 — 질병 상세 조회
   const handleSelectDisease = async (diseaseId: string) => {
     setSelectedDiseaseId(diseaseId);
     setDiseaseDetail(null);
@@ -76,7 +80,10 @@ export default function DiseaseSelector() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/diseases/${diseaseId}`);
+      // ✅ v1 포함된 실제 백엔드 스펙으로 호출
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/diseases/${diseaseId}`
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -102,7 +109,6 @@ export default function DiseaseSelector() {
 
   const handleNextStep = () => {
     if (selectedDiseaseId && diseaseDetail) {
-      // Step 2로 데이터 전달
       console.log('다음 단계로 진행:', selectedDiseaseId, diseaseDetail);
       // 나중에: router.push('/step2') 또는 Context API로 상태 전달
     }
@@ -120,7 +126,7 @@ export default function DiseaseSelector() {
         <div className="border-4 border-black rounded-3xl p-8 bg-white">
           {/* Disease Grid — 하드코딩된 목록을 바로 렌더링 */}
           <div className="grid grid-cols-3 gap-6 mb-8">
-            {DISEASE_LIST.map((disease) => (
+            {DISEASE_LIST.map((disease, idx) => (
               <button
                 key={disease.disease_id}
                 onClick={() => handleSelectDisease(disease.disease_id)}
@@ -131,13 +137,15 @@ export default function DiseaseSelector() {
                 }`}
               >
                 {/* Image Area */}
-                <div className="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+                <div className="relative w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
                   <Image
                     src={disease.image_url}
                     alt={disease.disease_name}
-                    width={200}
-                    height={160}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    // 첫 화면에 크게 보이는 이미지는 LCP일 수 있어서 첫 카드만 priority
+                    priority={idx === 0}
                   />
                 </div>
 
