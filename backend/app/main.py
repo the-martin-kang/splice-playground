@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.endpoints import splicing
 
 # 내부 모듈 임포트
 from app.api.v1.router import api_router
@@ -48,3 +49,6 @@ def root():
         "message": "Genomics Disease API is running",
         "docs": "/docs"
     }
+
+# splicing 추가
+app.include_router(splicing.router, prefix="/api/splicing", tags=["splicing"])
