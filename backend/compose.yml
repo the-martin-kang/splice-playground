@@ -3,5 +3,18 @@ services:
     build: .
     ports:
       - "8000:8000"
+<<<<<<< HEAD
     volumes:
       - ./app:/app/app
+=======
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    # 이 두 줄을 추가하고 저장하세요!
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+    working_dir: /app
+>>>>>>> backend

@@ -20,8 +20,13 @@ erDiagram
     }
 
     DISEASE_GENE {
+<<<<<<< HEAD
         TEXT disease_id PK, FK
         TEXT gene_id PK, FK
+=======
+        TEXT disease_id FK
+        TEXT gene_id FK
+>>>>>>> backend
     }
 
     DISEASE_REPRESENTATIVE_SNV {
@@ -47,15 +52,25 @@ erDiagram
     }
 
     BASELINE_RESULT {
+<<<<<<< HEAD
         TEXT gene_id PK, FK
         TEXT step PK
+=======
+        TEXT gene_id FK
+        TEXT step
+>>>>>>> backend
         TEXT model_version
         JSONB result_payload
     }
 
     SNV_RESULT {
+<<<<<<< HEAD
         TEXT disease_id PK, FK
         TEXT step PK
+=======
+        TEXT disease_id FK
+        TEXT step
+>>>>>>> backend
         TEXT model_version
         JSONB result_payload
         JSONB delta_payload
@@ -70,13 +85,19 @@ erDiagram
     }
 
     USER_STATE_RESULT {
+<<<<<<< HEAD
         UUID state_id PK, FK
         TEXT step PK
+=======
+        UUID state_id FK
+        TEXT step
+>>>>>>> backend
         TEXT model_version
         JSONB result_payload
         JSONB delta_payload
     }
 
+<<<<<<< HEAD
     STRUCTURE_JOB {
         UUID job_id PK
         UUID state_id FK
@@ -105,4 +126,19 @@ erDiagram
     USER_STATE ||--o{ USER_STATE_RESULT : caches
 
     USER_STATE ||--o{ STRUCTURE_JOB : runs
+=======
+    DISEASE ||--o{ DISEASE_GENE : links
+    GENE ||--o{ DISEASE_GENE : links
+
+    DISEASE ||--|| DISEASE_REPRESENTATIVE_SNV : has
+    GENE ||--o{ DISEASE_REPRESENTATIVE_SNV : contains
+
+    GENE ||--o{ REGION : has
+
+    GENE ||--o{ BASELINE_RESULT : produces
+    DISEASE ||--o{ SNV_RESULT : produces
+
+    DISEASE ||--o{ USER_STATE : spawns
+    USER_STATE ||--o{ USER_STATE_RESULT : yields
+>>>>>>> backend
 ```

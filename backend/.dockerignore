@@ -5,7 +5,11 @@
 # Python 가상환경 / 캐시
 .venv
 venv
+<<<<<<< HEAD
 env
+=======
+.env
+>>>>>>> backend
 __pycache__/
 *.pyc
 *.pyo
