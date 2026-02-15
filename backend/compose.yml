@@ -3,10 +3,6 @@ services:
     build: .
     ports:
       - "8000:8000"
-<<<<<<< HEAD
-    volumes:
-      - ./app:/app/app
-=======
     env_file:
       - .env
     volumes:
@@ -17,4 +13,3 @@ services:
       - 8.8.4.4
 
     working_dir: /app
->>>>>>> backend

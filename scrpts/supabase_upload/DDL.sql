@@ -1,11 +1,5 @@
 create extension if not exists "pgcrypto";
 
-<<<<<<< HEAD
--- =========================
--- disease
--- =========================
-=======
->>>>>>> backend
 create table if not exists public.disease (
   disease_id   text primary key,
   disease_name text not null,
@@ -13,12 +7,6 @@ create table if not exists public.disease (
   image_path   text
 );
 
-<<<<<<< HEAD
--- =========================
--- gene
--- =========================
-=======
->>>>>>> backend
 create table if not exists public.gene (
   gene_id                 text primary key,
   gene_symbol             text not null,
@@ -31,24 +19,12 @@ create table if not exists public.gene (
   source_version          text
 );
 
-<<<<<<< HEAD
--- =========================
--- disease_gene
--- =========================
-=======
->>>>>>> backend
 create table if not exists public.disease_gene (
   disease_id text not null references public.disease(disease_id) on delete cascade,
   gene_id    text not null references public.gene(gene_id) on delete cascade,
   primary key (disease_id, gene_id)
 );
 
-<<<<<<< HEAD
--- =========================
--- representative SNV per disease(seed)
--- =========================
-=======
->>>>>>> backend
 create table if not exists public.disease_representative_snv (
   disease_id  text primary key references public.disease(disease_id) on delete cascade,
   gene_id     text not null references public.gene(gene_id) on delete restrict,
@@ -59,12 +35,6 @@ create table if not exists public.disease_representative_snv (
   check (ref <> alt)
 );
 
-<<<<<<< HEAD
--- =========================
--- region (exon/intron sequences)
--- =========================
-=======
->>>>>>> backend
 create table if not exists public.region (
   region_id        text primary key,
   gene_id          text not null references public.gene(gene_id) on delete cascade,
@@ -88,49 +58,23 @@ create index if not exists idx_region_gene on public.region(gene_id);
 create index if not exists idx_region_gene_type_num on public.region.region(gene_id, region_type, region_number);
 create index if not exists idx_region_gene_idx on public.region(gene_id, gene_start_idx, gene_end_idx);
 
-<<<<<<< HEAD
--- =========================
--- baseline_result (cache)
--- step expanded to include mrna, structure
--- =========================
-create table if not exists public.baseline_result (
-  gene_id        text not null references public.gene(gene_id) on delete cascade,
-  step           text not null check (step in ('sequence', 'splicing', 'mrna', 'protein', 'structure')),
-=======
 create table if not exists public.baseline_result (
   gene_id        text not null references public.gene(gene_id) on delete cascade,
   step           text not null check (step in ('sequence', 'splicing', 'protein')),
->>>>>>> backend
   model_version  text not null,
   result_payload jsonb not null,
   primary key (gene_id, step)
 );
 
-<<<<<<< HEAD
--- =========================
--- snv_result (cache per disease seed)
--- step expanded to include mrna, structure
--- =========================
-create table if not exists public.snv_result (
-  disease_id     text not null references public.disease(disease_id) on delete cascade,
-  step           text not null check (step in ('sequence', 'splicing', 'mrna', 'protein', 'structure')),
-=======
 create table if not exists public.snv_result (
   disease_id     text not null references public.disease(disease_id) on delete cascade,
   step           text not null check (step in ('sequence', 'splicing', 'protein')),
->>>>>>> backend
   model_version  text not null,
   result_payload jsonb not null,
   delta_payload  jsonb,
   primary key (disease_id, step)
 );
 
-<<<<<<< HEAD
--- =========================
--- user_state
--- =========================
-=======
->>>>>>> backend
 create table if not exists public.user_state (
   state_id        uuid primary key default gen_random_uuid(),
   disease_id      text not null references public.disease(disease_id) on delete cascade,
@@ -142,45 +86,13 @@ create table if not exists public.user_state (
 create index if not exists idx_user_state_disease on public.user_state(disease_id);
 create index if not exists idx_user_state_parent on public.user_state(parent_state_id);
 
-<<<<<<< HEAD
--- =========================
--- user_state_result (cache)
--- step expanded to include mrna, structure
--- =========================
-create table if not exists public.user_state_result (
-  state_id       uuid not null references public.user_state(state_id) on delete cascade,
-  step           text not null check (step in ('sequence', 'splicing', 'mrna', 'protein', 'structure')),
-=======
 create table if not exists public.user_state_result (
   state_id       uuid not null references public.user_state(state_id) on delete cascade,
   step           text not null check (step in ('sequence', 'splicing', 'protein')),
->>>>>>> backend
   model_version  text not null,
   result_payload jsonb not null,
   delta_payload  jsonb,
   primary key (state_id, step)
 );
 
-<<<<<<< HEAD
 create index if not exists idx_user_state_result_step on public.user_state_result(step);
-
--- =========================
--- structure_job (async)
--- =========================
-create table if not exists public.structure_job (
-  job_id          uuid primary key default gen_random_uuid(),
-  state_id        uuid not null references public.user_state(state_id) on delete cascade,
-  provider        text not null default 'alphafold3',
-  status          text not null check (status in ('queued','running','succeeded','failed','canceled')),
-  created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now(),
-  external_job_id text,
-  result_payload  jsonb,
-  error_message   text
-);
-
-create index if not exists idx_structure_job_state on public.structure_job(state_id);
-create index if not exists idx_structure_job_status on public.structure_job(status);
-=======
-create index if not exists idx_user_state_result_step on public.user_state_result(step);
->>>>>>> backend

@@ -1,20 +1,8 @@
-<<<<<<< HEAD
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",        # 로컬 프론트 개발용
-        "https://your-app.vercel.app",  # 배포된 Vercel 도메인
-    ],
-=======
 import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.endpoints import splicing
 
 # 내부 모듈 임포트
 from app.api.v1.router import api_router
@@ -36,17 +24,11 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
->>>>>>> backend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-<<<<<<< HEAD
-@app.get("/health")
-def health():
-    return {"ok": True}
-=======
 # 정적 파일 설정 (질병 이미지용)
 current_file_path = os.path.dirname(os.path.realpath(__file__))
 static_dir = os.path.join(current_file_path, "static")
@@ -67,4 +49,6 @@ def root():
         "message": "Genomics Disease API is running",
         "docs": "/docs"
     }
->>>>>>> backend
+
+# splicing 추가
+app.include_router(splicing.router, prefix="/api/splicing", tags=["splicing"])
