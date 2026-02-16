@@ -1,3 +1,4 @@
+```
 backend/
   app/
     main.py                  # FastAPI app 생성, router include, CORS
@@ -39,3 +40,4 @@ backend/
   Dockerfile                 # 다음 단계(3)에서 작성
   .env.example
   README.md
+```
