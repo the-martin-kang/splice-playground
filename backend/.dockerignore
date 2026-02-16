@@ -25,6 +25,20 @@ temp/
 cache/
 
 # 데이터 (로컬용, 이미지에는 넣지 않음)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.venv/
+.uv-cache/
+.git/
+.gitignore
+.DS_Store
+pytest_cache/
+mypy_cache/
+
 data/
 *.fasta
 *.fa

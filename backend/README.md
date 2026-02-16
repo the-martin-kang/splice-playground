@@ -1,45 +1,41 @@
-```
 backend/
-├─ app/
-│  ├─ main.py              # FastAPI 앱 시작점 (엔트리 포인트)
-│  │                       # → 여기서 FastAPI() 만들고 라우터(include_router) 모은다
-│  │
-│  ├─ api/                 # URL 엔드포인트(라우터) 모음
-│  │  ├─ __init__.py
-│  │  └─ v1/
-│  │     ├─ __init__.py
-│  │     ├─ sequences.py   # 예: 서열 관련 API (/predict, /sequence 등)
-│  │     └─ auth.py        # 예: 로그인/회원 관련 API
-│  │
-│  ├─ schemas/             # Pydantic 스키마 (입출력 데이터 정의)
-│  │  ├─ __init__.py
-│  │  ├─ sequences.py      # 요청/응답용 모델 (SequenceRequest, PredictionResult 등)
-│  │  └─ users.py          # UserCreate, UserLogin, UserInfo 등
-│  │
-│  ├─ services/            # 핵심 로직 (비즈니스 로직, ML 호출 등)
-│  │  ├─ __init__.py
-│  │  └─ splicing.py       # SpliceAI/SpliceTransformer 등 모델 호출/전처리 함수
-│  │                       # 예: run_splice_model(sequence: str) -> Prediction
-│  │
-│  ├─ db/                  # DB, Supabase 연동 관련
-│  │  ├─ __init__.py
-│  │  └─ supabase.py       # Supabase 클라이언트 생성, 쿼리 함수 모음
-│  │                       # 예: save_prediction(...), get_user(...), list_jobs(...)
-│  │
-│  ├─ core/                # 공통 설정, 유틸, 보안 등
-│  │  ├─ __init__.py
-│  │  ├─ config.py         # 환경변수, 설정값 (BASE_URL, DB_URL, API_KEYS 등)
-│  │  └─ security.py       # JWT 토큰, 비밀번호 해시 등 (필요하면)
-│  │
-│  └─ utils/               # 자잘한 유틸 함수들
-│     ├─ __init__.py
-│     └─ parsing.py        # FASTA 파싱, 염기서열 전처리 함수 등
-│
-├─ tests/                  # 백엔드 테스트 코드 (나중에라도 분리해두면 좋음)
-│  └─ test_sequences.py
-│
-├─ requirements.txt        # 백엔드 파이썬 라이브러리 목록
-# 또는 pyproject.toml      # poetry/uv 같은 툴 쓸 때
-│
-└─ Dockerfile              # 이 폴더 기준으로 백엔드 도커 이미지 빌드
-```
+  app/
+    main.py                  # FastAPI app 생성, router include, CORS
+    core/
+      config.py              # env 로드 (SUPABASE_URL, KEY, SIGNED_TTL 등)
+      cors.py                # allowed origins (Vercel)
+    db/
+      supabase_client.py     # create_client()
+      repositories/
+        disease_repo.py
+        gene_repo.py
+        region_repo.py
+        snv_repo.py
+        window_repo.py
+        state_repo.py
+        baseline_repo.py     # (Step3)
+    services/
+      storage_service.py     # signed url 생성(B방식)
+      disease_service.py     # Step1/2 조합 로직
+      state_service.py       # state 생성
+    api/
+      router.py              # /api 라우터 묶기
+      routes/
+        diseases.py          # Step1/Step2-1
+        states.py            # Step2-2
+        baseline.py          # Step3 placeholder
+        splicing.py          # Step3 placeholder
+        structure.py         # Step4 placeholder
+    schemas/
+      disease.py
+      gene.py
+      region.py
+      state.py
+      common.py              # ErrorResponse, ListResponse 등
+    utils/
+      genetics.py            # (필요시) 서열/좌표 유틸
+  pyproject.toml             # uv 관리
+  uv.lock
+  Dockerfile                 # 다음 단계(3)에서 작성
+  .env.example
+  README.md
