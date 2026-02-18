@@ -1,10 +1,10 @@
 # app/api/routes/diseases.py
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 
-from app.db.supabase_client import DBNotFoundError, DBQueryError
-from app.schemas.disease import DiseaseListResponse, Step2PayloadResponse
+from app.schemas.disease import DiseaseListResponse, Step2PayloadResponse, Window4000Response
+from app.schemas.region import RegionDetailResponse
 from app.services.disease_service import DiseaseService
 
 router = APIRouter(prefix="/diseases", tags=["diseases"])
@@ -15,16 +15,7 @@ def list_diseases(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ) -> DiseaseListResponse:
-    """
-    STEP1: 질병 카드 리스트
-    """
-    try:
-        raw = DiseaseService.list_diseases(limit=limit, offset=offset)
-        return DiseaseListResponse.model_validate(raw)
-    except DBQueryError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return DiseaseService.list_diseases(limit=limit, offset=offset)
 
 
 @router.get("/{disease_id}", response_model=Step2PayloadResponse)
@@ -32,17 +23,45 @@ def get_disease_step2_payload(
     disease_id: str,
     include_sequence: bool = Query(True, description="Step2 DNA 편집을 위해 region.sequence 포함 여부"),
 ) -> Step2PayloadResponse:
-    """
-    STEP2-1: 특정 disease_id에 대한 Step2 화면 구성 payload
-    """
-    try:
-        raw = DiseaseService.get_step2_payload(disease_id=disease_id, include_sequence=include_sequence)
-        return Step2PayloadResponse.model_validate(raw)
-    except DBNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except DBQueryError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return DiseaseService.get_step2_payload(disease_id=disease_id, include_sequence=include_sequence)
+
+
+@router.get("/{disease_id}/regions/{region_type}/{region_number}", response_model=RegionDetailResponse)
+def get_region_by_type_number(
+    disease_id: str,
+    region_type: str,
+    region_number: int,
+    include_sequence: bool = Query(True, description="region.sequence 포함 여부"),
+) -> RegionDetailResponse:
+    return DiseaseService.get_region_detail(
+        disease_id=disease_id,
+        region_type=region_type,
+        region_number=region_number,
+        include_sequence=include_sequence,
+    )
+
+
+@router.get("/{disease_id}/window", response_model=Window4000Response)
+def get_window(
+    disease_id: str,
+    window_size: int = Query(4000, ge=1, le=20000, description="variable window length"),
+    strict_ref_check: bool = Query(True, description="센터 염기(ref) 불일치 시 에러"),
+) -> Window4000Response:
+    return DiseaseService.get_window_4000(
+        disease_id=disease_id,
+        window_size=window_size,
+        strict_ref_check=strict_ref_check,
+    )
+
+
+@router.get("/{disease_id}/window_4000", response_model=Window4000Response, include_in_schema=False)
+def get_window_4000_alias(
+    disease_id: str,
+    window_size: int = Query(4000, ge=1, le=20000),
+    strict_ref_check: bool = Query(True),
+) -> Window4000Response:
+    return DiseaseService.get_window_4000(
+        disease_id=disease_id,
+        window_size=window_size,
+        strict_ref_check=strict_ref_check,
+    )

@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from app.db.supabase_client import execute, ensure_list, ensure_one, get_supabase_client
+from app.db.supabase_client import DBNotFoundError, DBQueryError
 
 
 class RegionRepo:
@@ -92,3 +93,47 @@ class RegionRepo:
         res = execute(q)
         rows = ensure_list(res.data)
         return ensure_one(rows, not_found_message=f"region not found containing pos={pos_gene0} for gene={gene_id}")
+
+    # 2.16추가 gene region별로 받기
+    @staticmethod
+    def get_region_by_gene_type_number(
+            gene_id: str,
+            region_type: str,
+            region_number: int,
+            *,
+            include_sequence: bool = True,
+    ) -> dict:
+        """
+        gene_id + (exon|intron) + number로 특정 region 1개 가져오기.
+        없으면 DBNotFoundError -> 전역 handler가 404로 변환.
+        """
+        sb = get_supabase_client()
+
+        region_type = region_type.lower().strip()
+        cols = (
+                "region_id,gene_id,region_type,region_number,"
+                "gene_start_idx,gene_end_idx,length,"
+                + ("sequence," if include_sequence else "")
+                + "cds_start_offset,cds_end_offset"
+        )
+
+        try:
+            resp = (
+                sb.table("region")
+                .select(cols)
+                .eq("gene_id", gene_id)
+                .eq("region_type", region_type)
+                .eq("region_number", int(region_number))
+                .limit(1)
+                .execute()
+            )
+        except Exception as e:
+            raise DBQueryError(f"Failed to query region: {e}") from e
+
+        data = getattr(resp, "data", None) or []
+        if not data:
+            raise DBNotFoundError(
+                f"Region not found: gene_id={gene_id}, region_type={region_type}, region_number={region_number}"
+            )
+
+        return data[0]

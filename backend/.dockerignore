@@ -1,88 +1,48 @@
-# VCS
-.git
-.gitignore
+# -------------------------
+# 1) 기본: 전부 무시 (빌드 컨텍스트 최소화)
+# -------------------------
+**
 
-# Python 가상환경 / 캐시
-.venv
-venv
-.env
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.pytype/
-.coverage
-htmlcov/
+# -------------------------
+# 2) Docker 빌드에 필요한 파일만 포함(Allowlist)
+# -------------------------
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!uv.lock
+!.python-version
 
-# 로그 / 임시 파일
-*.log
-logs/
-tmp/
-temp/
-cache/
+# 앱 소스
+!app/
+!app/**
 
-# 데이터 (로컬용, 이미지에는 넣지 않음)
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-.env
-.venv/
-.uv-cache/
-.git/
-.gitignore
-.DS_Store
-pytest_cache/
-mypy_cache/
+# -------------------------
+# 3) app 아래라도 불필요한 아티팩트는 제외
+# -------------------------
+app/**/__pycache__/
+app/**/*.py[cod]
 
-data/
-*.fasta
-*.fa
-*.fna
-*.ffn
-*.faa
-*.fastq
-*.fq
-*.gtf
-*.gff
-*.gff3
-*.bed
-*.bam
-*.sam
-*.cram
-*.vcf
-*.bcf
-*.bigwig
-*.bw
-*.wig
-*.h5
-*.hdf5
-*.pt
-*.pth
-*.ckpt
-*.npz
-*.npy
-*.pkl
-*.pickle
-*.joblib
-*.csv
-*.tsv
-*.parquet
-*.zip
-*.tar
-*.tar.gz
-*.tgz
-*.gz
+app/**/.pytest_cache/
+app/**/.mypy_cache/
+app/**/.ruff_cache/
+app/**/.pytype/
 
-# IDE / 편집기
-.vscode/
-.idea/
-*.swp
-*.swo
+app/**/.coverage
+app/**/htmlcov/
+app/**/*.log
 
-# 기타 필요 없는 것들
-Dockerfile~
+# OS/에디터 잡동사니(혹시 app 아래에 생겨도 제외)
+app/**/.DS_Store
+app/**/.env
+app/**/.env.*
+
+# -------------------------
+# 4) (중요) 모델 weight/대용량 파일은 기본 제외
+#    나중에 Step3에서 모델을 이미지에 포함할지, S3/EFS로 둘지 결정 가능
+# -------------------------
+app/ai_models/**/*.pt
+app/ai_models/**/*.pth
+app/ai_models/**/*.ckpt
+app/ai_models/**/*.onnx
+scr/
+validation_pkg/

@@ -8,12 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-# uv는 pip 설치 대신 공식 이미지에서 "버전 pin"해서 바이너리 복사 (best practice)
 COPY --from=ghcr.io/astral-sh/uv:0.10.2 /uv /uvx /bin/
 
 WORKDIR /app
 
-# Python 버전 고정 파일이 있으면 같이 복사
 COPY pyproject.toml uv.lock .python-version ./
 
 # lockfile 기반 설치 + system python 3.12 강제 + python 자동 다운로드 금지

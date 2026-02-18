@@ -37,7 +37,7 @@ backend/
       genetics.py            # (필요시) 서열/좌표 유틸
   pyproject.toml             # uv 관리
   uv.lock
-  Dockerfile                 # 다음 단계(3)에서 작성
+  Dockerfile
   .env.example
   README.md
 ```

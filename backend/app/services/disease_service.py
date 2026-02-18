@@ -1,7 +1,10 @@
 # app/services/disease_service.py
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
+import re
+from app.schemas.region import RegionBase, RegionContext, RegionDetailResponse
 
 from app.db.repositories.disease_repo import DiseaseRepo
 from app.db.repositories.gene_repo import GeneRepo
@@ -15,11 +18,96 @@ from app.schemas.disease import (
     SpliceAlteringSNV,
     Step2PayloadResponse,
     Step2Target,
-    TargetWindow,
+    TargetWindow, Window4000Response,
 )
 from app.schemas.gene import Gene
 from app.schemas.region import RegionBase, RegionContext
 from app.services.storage_service import StorageService
+
+# app/services/disease_service.py (추가 코드)
+def _compute_centers(window_size: int) -> tuple[int, int, int, int]:
+    """
+    Returns (left_center_0, right_center_0, used_center_0, used_center_1)
+    Rule:
+      - odd  : left==right==used==window_size//2
+      - even : left=window_size//2 - 1, right=used=window_size//2
+    """
+    right = window_size // 2
+    left = right if (window_size % 2 == 1) else (right - 1)
+    used = right
+    return left, right, used, used + 1
+
+
+_BASE_COMP = str.maketrans({"A": "T", "C": "G", "G": "C", "T": "A", "N": "N"})
+
+
+def _norm_base(b: str) -> str:
+    if b is None:
+        return "N"
+    s = str(b).strip().upper()
+    return s[0] if s else "N"
+
+
+def _comp_base(b: str) -> str:
+    return _norm_base(b).translate(_BASE_COMP)
+
+@lru_cache(maxsize=256)
+def _get_gene_sequence_cached(gene_id: str) -> Tuple[str, int]:
+    """
+    region 테이블의 exon/intron sequence를 gene_start_idx 순서로 concat하여
+    gene0 전체 서열을 만든다.
+
+    ✅ 변경점:
+    - 첫 region이 0에서 시작하지 않아도 허용 (prefix를 'N'으로 패딩)
+      예: MSH2는 first exon start가 gene0=89
+    - 중간 gap(누락)은 여전히 에러로 처리 (DB 누락 잡기)
+    """
+    region_rows = RegionRepo.list_regions_by_gene(gene_id, include_sequence=True)
+    if not region_rows:
+        raise ValueError(f"No regions found for gene_id={gene_id}")
+
+    region_rows = sorted(region_rows, key=lambda r: int(r["gene_start_idx"]))
+
+    seq_parts: List[str] = []
+    prev_end: Optional[int] = None
+    total_len = 0
+
+    for r in region_rows:
+        seq = r.get("sequence")
+        if not isinstance(seq, str) or len(seq) == 0:
+            raise ValueError(f"Missing region.sequence for region_id={r.get('region_id')}")
+
+        start = int(r["gene_start_idx"])
+        end = int(r["gene_end_idx"])
+        length = int(r.get("length") or (end - start + 1))
+
+        if len(seq) != length:
+            raise ValueError(
+                f"Region length mismatch: region_id={r.get('region_id')} "
+                f"len(sequence)={len(seq)} vs length={length} (start={start}, end={end})"
+            )
+
+        # ✅ 첫 조각이 0에서 시작하지 않는 경우: prefix를 'N'으로 채움
+        if prev_end is None:
+            prev_end = -1
+            if start > 0:
+                seq_parts.append("N" * start)
+                total_len += start
+                prev_end = start - 1
+
+        # ✅ 이후는 연속성 강제(중간 누락이면 DB가 불완전한 것)
+        if start != prev_end + 1:
+            raise ValueError(
+                f"Non-contiguous regions for gene_id={gene_id}: "
+                f"prev_end={prev_end}, next_start={start}"
+            )
+
+        seq_parts.append(seq.upper())
+        total_len += len(seq)
+        prev_end = end
+
+    gene_seq = "".join(seq_parts)
+    return gene_seq, total_len
 
 
 def _pick_5_region_window(center_idx: int, total: int) -> Tuple[int, int]:
@@ -209,4 +297,146 @@ class DiseaseService:
             splice_altering_snv=snv_model,
             target=target,
             ui_hints=ui_hints,
+        )
+
+    # 2.16 Region type by gene을 위해 추가
+    @staticmethod
+    def get_region_detail(
+        *,
+        disease_id: str,
+        region_type: str,
+        region_number: int,
+        include_sequence: bool = True,
+    ) -> RegionDetailResponse:
+        disease_row = DiseaseRepo.get_disease_by_id(disease_id)
+        gene_id = str(disease_row["gene_id"])
+
+        if region_type.lower() not in ("exon", "intron"):
+            raise ValueError("region_type must be 'exon' or 'intron'")
+        if int(region_number) < 1:
+            raise ValueError("region_number must be >= 1")
+
+        region_row = RegionRepo.get_region_by_gene_type_number(
+            gene_id=gene_id,
+            region_type=region_type,
+            region_number=int(region_number),
+            include_sequence=include_sequence,
+        )
+        region_model = RegionBase.model_validate(region_row)
+
+        return RegionDetailResponse(
+            disease_id=disease_id,
+            gene_id=gene_id,
+            region=region_model,
+        )
+
+    @staticmethod
+    def get_window_4000(
+        *,
+        disease_id: str,
+        window_size: int = 4000,
+        strict_ref_check: bool = True,
+    ) -> Window4000Response:
+        """
+        Variable-length window generator.
+
+        Center index rule:
+          - odd  : center = window_size//2
+          - even : choose the larger of the two centers => center = window_size//2
+        """
+        if not isinstance(window_size, int) or window_size < 1:
+            raise ValueError("window_size must be a positive integer")
+        if window_size > 20000:
+            # 안전장치: 응답이 너무 커지는 것을 막기 위한 상한(원하면 늘려도 됨)
+            raise ValueError("window_size too large (max=20000)")
+
+        disease_row = DiseaseRepo.get_disease_by_id(disease_id)
+        gene_id = str(disease_row["gene_id"])
+
+        gene_row = GeneRepo.get_gene_by_id(gene_id, select="gene_id,chromosome,strand,length")
+        strand = str(gene_row["strand"])
+        chromosome = gene_row.get("chromosome")
+        gene_length = int(gene_row["length"])
+
+        snv_row = SNVRepo.get_representative_snv_by_disease(disease_id, allow_none=False)
+        pos_gene0 = int(snv_row["pos_gene0"])
+        pos_hg38_1 = snv_row.get("pos_hg38_1")
+        ref_pos = _norm_base(snv_row["ref"])  # positive strand base
+        alt_pos = _norm_base(snv_row["alt"])  # positive strand base
+
+        # gene0 full sequence from regions
+        gene_seq, assembled_len = _get_gene_sequence_cached(gene_id)
+        # assembled_len이 gene_length보다 짧으면 suffix를 N으로 패딩해서 gene0 인덱스 일치시킴
+        if assembled_len < gene_length:
+            gene_seq = gene_seq + ("N" * (gene_length - assembled_len))
+            assembled_len = gene_length
+
+        # assembled_len이 더 길면 DB 좌표/길이 정의가 꼬인 것이라 에러
+        if assembled_len > gene_length or len(gene_seq) != gene_length:
+            raise ValueError(
+                f"Gene length mismatch for {gene_id}: gene.length={gene_length}, assembled={assembled_len}"
+            )
+
+        left_center_0, right_center_0, center_0, center_1 = _compute_centers(window_size)
+
+        # window boundary in gene0 coordinates
+        window_start = pos_gene0 - center_0
+        window_end_excl = window_start + window_size
+
+        left_pad = max(0, -window_start)
+        right_pad = max(0, window_end_excl - gene_length)
+
+        start_in_gene = max(0, window_start)
+        end_in_gene = min(gene_length, window_end_excl)
+
+        ref_seq = ("N" * left_pad) + gene_seq[start_in_gene:end_in_gene] + ("N" * right_pad)
+        if len(ref_seq) != window_size:
+            raise ValueError(f"Internal error: ref_seq length != window_size (len={len(ref_seq)})")
+
+        # expected ref/alt in gene0 orientation
+        if strand == "-":
+            expected_ref_gene0 = _comp_base(ref_pos)
+            alt_gene0 = _comp_base(alt_pos)
+        else:
+            expected_ref_gene0 = ref_pos
+            alt_gene0 = alt_pos
+
+        actual_center = ref_seq[center_0]
+        ref_matches = (actual_center == expected_ref_gene0)
+
+        if strict_ref_check and not ref_matches:
+            raise ValueError(
+                f"Reference base mismatch at center for {disease_id}: "
+                f"expected={expected_ref_gene0} (from ref={ref_pos}, strand={strand}) "
+                f"but got={actual_center}. Check region sequences / coordinates."
+            )
+
+        alt_seq = ref_seq[:center_0] + alt_gene0 + ref_seq[center_0 + 1 :]
+        if len(alt_seq) != window_size:
+            raise ValueError(f"Internal error: alt_seq length != window_size (len={len(alt_seq)})")
+
+        return Window4000Response(
+            disease_id=disease_id,
+            gene_id=gene_id,
+            chromosome=chromosome,
+            strand=strand,
+            pos_gene0=pos_gene0,
+            pos_hg38_1=pos_hg38_1,
+            ref=ref_pos,
+            alt=alt_pos,
+            window_size=window_size,
+            left_center_index_0=left_center_0,
+            right_center_index_0=right_center_0,
+            center_index_0=center_0,
+            center_index_1=center_1,
+            window_start_gene0=window_start,
+            window_end_gene0_exclusive=window_end_excl,
+            gene_length=gene_length,
+            left_pad=left_pad,
+            right_pad=right_pad,
+            expected_ref_at_center=expected_ref_gene0,
+            actual_ref_at_center=actual_center,
+            ref_matches=ref_matches,
+            ref_seq_4000=ref_seq,
+            alt_seq_4000=alt_seq,
         )

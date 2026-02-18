@@ -1,25 +1,27 @@
-# app/api/routes/diseases.py
+# app/api/router.py
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
-from app.schemas.disease import DiseaseListResponse, Step2PayloadResponse
-from app.services.disease_service import DiseaseService
+from app.api.routes.diseases import router as diseases_router
+from app.api.routes.states import router as states_router
 
-router = APIRouter(prefix="/diseases", tags=["diseases"])
+# placeholder routers (있다면 포함)
+from app.api.routes.baseline import router as baseline_router
+from app.api.routes.splicing import router as splicing_router
+from app.api.routes.structure import router as structure_router
 
+router = APIRouter()
 
-@router.get("", response_model=DiseaseListResponse)
-def list_diseases(
-    limit: int = Query(100, ge=1, le=500),
-    offset: int = Query(0, ge=0),
-) -> DiseaseListResponse:
-    return DiseaseService.list_diseases(limit=limit, offset=offset)
+@router.get("/ping", tags=["system"])
+def ping():
+    return {"ok": True}
 
+# Step1/2
+router.include_router(diseases_router)
+router.include_router(states_router)
 
-@router.get("/{disease_id}", response_model=Step2PayloadResponse)
-def get_disease_step2_payload(
-    disease_id: str,
-    include_sequence: bool = Query(True, description="Step2에서 region.sequence 포함 여부"),
-) -> Step2PayloadResponse:
-    return DiseaseService.get_step2_payload(disease_id=disease_id, include_sequence=include_sequence)
+# Step3/4 placeholder
+router.include_router(baseline_router)
+router.include_router(splicing_router)
+router.include_router(structure_router)

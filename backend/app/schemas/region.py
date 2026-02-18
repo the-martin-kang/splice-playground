@@ -34,3 +34,12 @@ class RegionContext(RegionBase):
     focus_region 대비 상대 위치(-2..+2)를 담는다.
     """
     rel: int = Field(..., description="relative index from focus region (e.g. -2..+2)")
+
+# app/schemas/region.py
+from pydantic import BaseModel
+
+
+class RegionDetailResponse(BaseModel):
+    disease_id: str
+    gene_id: str
+    region: "RegionBase"  # RegionBase는 기존에 있는 모델 사용
