@@ -2,22 +2,29 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
-// 질병 목록 타입
+// 질병 목록 타입 (새 API 구조)
 interface Disease {
   disease_id: string;
   disease_name: string;
   description: string | null;
+  gene_id: string;
   image_path: string;
+  image_url: string;
+  image_expires_in: number;
 }
 
-// 질병 상세 타입
+// 질병 상세 타입 (새 API 구조)
 interface DiseaseDetail {
   disease: {
     disease_id: string;
     disease_name: string;
     description: string | null;
+    gene_id: string;
     image_path: string;
+    image_url: string;
+    image_expires_in: number;
   };
   gene: {
     gene_id: string;
@@ -26,32 +33,72 @@ interface DiseaseDetail {
     strand: string;
     length: number;
     exon_count: number;
-    canonical_source: string;
     canonical_transcript_id: string;
+    canonical_source: string;
     source_version: string;
   };
-  seed_snv: {
+  splice_altering_snv: {
+    snv_id: string;
     pos_gene0: number;
     ref: string;
     alt: string;
-    note: string | null;
+    coordinate: {
+      coordinate_system: string;
+      assembly: string;
+      chromosome: string;
+      pos_hg38_1: number;
+      genomic_position: string;
+    };
+    note: string;
+    is_representative: boolean;
   } | null;
+  target: {
+    window: {
+      start_gene0: number;
+      end_gene0: number;
+      label: string;
+      chosen_by: string;
+      note: string;
+    };
+    focus_region: {
+      region_id: string;
+      region_type: string;
+      region_number: number;
+      gene_start_idx: number;
+      gene_end_idx: number;
+      length: number;
+      sequence: string | null;
+    };
+    context_regions: Array<{
+      region_id: string;
+      region_type: string;
+      region_number: number;
+      gene_start_idx: number;
+      gene_end_idx: number;
+      length: number;
+      sequence: string | null;
+      rel: number;
+    }>;
+    constraints: {
+      sequence_alphabet: string[];
+      edit_length_must_be_preserved: boolean;
+      edit_type: string;
+    };
+  };
+  ui_hints: {
+    highlight: {
+      type: string;
+      pos_gene0: number;
+    };
+    default_view: string;
+  };
 }
 
-// FastAPI URL (환경 변수에서 읽음)
+// FastAPI URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
-// 이미지 하드코딩 (백엔드 준비 전까지 임시)
-const DISEASE_IMAGES: { [key: string]: string } = {
-  'CFTR_gene0_109442_A>G': '/images/CFTR.jpeg',
-  'DNM1_gene0_22648_G>A': '/images/DNM1.png',
-  'MSH2_gene0_4856_T>G': '/images/MSH2.png',
-  'PMM2_gene0_34406_C>T': '/images/PMM2.png',
-  'SMN1_gene0_27005_C>T': '/images/SMN_SMA.png',
-  'TSC2_gene0_9474_C>T': '/images/TSC2.png',
-};
-
 export default function DiseaseSelector() {
+  const router = useRouter();
   const [diseases, setDiseases] = useState<Disease[]>([]);
   const [selectedDiseaseId, setSelectedDiseaseId] = useState<string | null>(null);
   const [diseaseDetail, setDiseaseDetail] = useState<DiseaseDetail | null>(null);
@@ -59,13 +106,13 @@ export default function DiseaseSelector() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. 질병 목록 조회 - GET /api/v1/diseases/
+  // 1. 질병 목록 조회 - GET /diseases
   useEffect(() => {
     const fetchDiseases = async () => {
       setIsListLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/diseases/`);
+        const response = await fetch(`${API_BASE_URL}/api/diseases?limit=100&offset=0`);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -86,7 +133,7 @@ export default function DiseaseSelector() {
     fetchDiseases();
   }, []);
 
-  // 2. 질병 상세 조회 - GET /api/v1/diseases/{disease_id}
+  // 2. 질병 상세 조회 - GET /diseases/{disease_id}
   const handleSelectDisease = async (diseaseId: string) => {
     setSelectedDiseaseId(diseaseId);
     setDiseaseDetail(null);
@@ -94,9 +141,7 @@ export default function DiseaseSelector() {
     setError(null);
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/diseases/${encodeURIComponent(diseaseId)}`
-      );
+      const response = await fetch(`${API_BASE_URL}/api/diseases/${encodeURIComponent(diseaseId)}?include_sequence=true`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -122,15 +167,9 @@ export default function DiseaseSelector() {
 
   const handleNextStep = () => {
     if (selectedDiseaseId && diseaseDetail) {
-      // Step 2로 데이터 전달
-      console.log('다음 단계로 진행:', selectedDiseaseId, diseaseDetail);
-      // 나중에: router.push('/step2') 또는 Context API로 상태 전달
+      // Step 2로 이동하면서 disease_id 전달
+      router.push(`/step2?disease_id=${encodeURIComponent(selectedDiseaseId)}`);
     }
-  };
-
-  // 이미지 URL 생성 (하드코딩 우선, 없으면 백엔드 경로)
-  const getImageUrl = (diseaseId: string, imagePath: string) => {
-    return DISEASE_IMAGES[diseaseId] || `${API_BASE_URL}${imagePath}`;
   };
 
   return (
@@ -174,10 +213,10 @@ export default function DiseaseSelector() {
                       : 'border-black hover:bg-gray-50'
                   }`}
                 >
-                  {/* Image Area */}
+                  {/* Image Area - 백엔드 image_url 사용 */}
                   <div className="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
                     <Image
-                      src={getImageUrl(disease.disease_id, disease.image_path)}
+                      src={disease.image_url}
                       alt={disease.disease_name}
                       width={200}
                       height={160}
@@ -231,6 +270,10 @@ export default function DiseaseSelector() {
                         <span className="font-semibold">ID:</span>{' '}
                         {diseaseDetail.disease.disease_id}
                       </p>
+                      <p>
+                        <span className="font-semibold">Gene:</span>{' '}
+                        {diseaseDetail.disease.gene_id}
+                      </p>
                       {diseaseDetail.disease.description && (
                         <p>
                           <span className="font-semibold">설명:</span>{' '}
@@ -264,44 +307,30 @@ export default function DiseaseSelector() {
                         <span className="font-semibold">Exon 수:</span>{' '}
                         {diseaseDetail.gene.exon_count}
                       </p>
-                      <p>
-                        <span className="font-semibold">Canonical Source:</span>{' '}
-                        {diseaseDetail.gene.canonical_source}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Transcript ID:</span>{' '}
-                        {diseaseDetail.gene.canonical_transcript_id}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Source Version:</span>{' '}
-                        {diseaseDetail.gene.source_version}
-                      </p>
                     </div>
                   </div>
 
                   {/* SNV Info */}
-                  {diseaseDetail.seed_snv && (
+                  {diseaseDetail.splice_altering_snv && (
                     <div className="mb-6">
-                      <h3 className="text-lg font-bold text-black mb-3">Seed SNV</h3>
+                      <h3 className="text-lg font-bold text-black mb-3">Splice Altering SNV</h3>
                       <div className="space-y-2 text-sm text-black">
                         <p>
                           <span className="font-semibold">위치 (Gene0):</span>{' '}
-                          {diseaseDetail.seed_snv.pos_gene0}
+                          {diseaseDetail.splice_altering_snv.pos_gene0}
                         </p>
                         <p>
                           <span className="font-semibold">Reference:</span>{' '}
-                          {diseaseDetail.seed_snv.ref}
+                          {diseaseDetail.splice_altering_snv.ref}
                         </p>
                         <p>
                           <span className="font-semibold">Alternate:</span>{' '}
-                          {diseaseDetail.seed_snv.alt}
+                          {diseaseDetail.splice_altering_snv.alt}
                         </p>
-                        {diseaseDetail.seed_snv.note && (
-                          <p>
-                            <span className="font-semibold">노트:</span>{' '}
-                            {diseaseDetail.seed_snv.note}
-                          </p>
-                        )}
+                        <p>
+                          <span className="font-semibold">Genomic Position:</span>{' '}
+                          {diseaseDetail.splice_altering_snv.coordinate.genomic_position}
+                        </p>
                       </div>
                     </div>
                   )}
