@@ -11,7 +11,7 @@
 !pyproject.toml
 !uv.lock
 !.python-version
-
+!app/ai_models/*.pt
 # 앱 소스
 !app/
 !app/**
@@ -46,3 +46,4 @@ app/ai_models/**/*.ckpt
 app/ai_models/**/*.onnx
 scr/
 validation_pkg/
+dev_gui/

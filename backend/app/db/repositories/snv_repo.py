@@ -1,61 +1,77 @@
-# app/db/repositories/snv_repo.py
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+import re
+from typing import Any, Dict, Optional, Tuple
 
-from app.db.supabase_client import DBNotFoundError, execute, ensure_list, ensure_one, get_supabase_client
+from app.db.supabase_client import get_supabase_client
+from app.db.repositories._helpers import first_or_none, unwrap_execute_result
+
+_CHR_RE = re.compile(r"(?:^|;)chr=([^;]+)")
+_POS1_RE = re.compile(r"(?:^|;)pos1=([0-9]+)")
 
 
-class SNVRepo:
-    TABLE = "splice_altering_snv"
+def _parse_coordinate_from_note(note: Optional[str]) -> Tuple[Optional[str], Optional[int]]:
+    if not note:
+        return None, None
+    m1 = _CHR_RE.search(note)
+    m2 = _POS1_RE.search(note)
+    chrom = m1.group(1) if m1 else None
+    pos1 = int(m2.group(1)) if m2 else None
+    return chrom, pos1
 
-    DEFAULT_SELECT = (
-        "snv_id,disease_id,gene_id,pos_gene0,ref,alt,is_representative,"
-        "chromosome,pos_hg38_1,note,created_at,updated_at"
-    )
 
-    @staticmethod
-    def list_snvs_by_disease(
-        disease_id: str,
-        *,
-        select: str = DEFAULT_SELECT,
-        order_by: str = "pos_gene0",
-        ascending: bool = True,
-    ) -> List[Dict[str, Any]]:
-        sb = get_supabase_client()
-        q = (
-            sb.table(SNVRepo.TABLE)
-            .select(select)
-            .eq("disease_id", disease_id)
-            .order(order_by, desc=not ascending)
-        )
-        res = execute(q)
-        return ensure_list(res.data)
+def get_representative_snv(disease_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch representative splice_altering_snv for a disease.
 
-    @staticmethod
-    def get_representative_snv_by_disease(
-        disease_id: str,
-        *,
-        select: str = DEFAULT_SELECT,
-        allow_none: bool = False,
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Return representative SNV (is_representative=true).
-        - If allow_none=False: raise if missing
-        - If allow_none=True: return None if missing
-        """
-        sb = get_supabase_client()
-        q = (
-            sb.table(SNVRepo.TABLE)
-            .select(select)
+    Preferred: is_representative=true row in splice_altering_snv
+    Fallback: parse disease_id pattern: GENE_gene0_POS_REF>ALT
+    """
+    sb = get_supabase_client()
+    try:
+        res = (
+            sb.table("splice_altering_snv")
+            .select("*")
             .eq("disease_id", disease_id)
             .eq("is_representative", True)
             .limit(1)
+            .execute()
         )
-        res = execute(q)
-        rows = ensure_list(res.data)
-        if not rows:
-            if allow_none:
-                return None
-            raise DBNotFoundError(f"representative SNV not found for disease_id={disease_id}")
-        return rows[0]
+        data, _, _ = unwrap_execute_result(res)
+        row = first_or_none(data)
+        if row:
+            # normalize coordinate fields (best-effort)
+            note = row.get("note")
+            chrom = row.get("chromosome") or row.get("chrom") or row.get("chr")
+            pos1 = row.get("pos_hg38_1") or row.get("pos1")
+            if (chrom is None or pos1 is None) and isinstance(note, str):
+                c2, p2 = _parse_coordinate_from_note(note)
+                chrom = chrom or c2
+                pos1 = pos1 or p2
+            row["_chrom"] = chrom
+            row["_pos1"] = int(pos1) if pos1 is not None else None
+            return row
+    except Exception:
+        # table/column might not exist yet; continue to fallback
+        pass
+
+    # fallback parse
+    try:
+        gene, gene0, pos, change = disease_id.split("_", 3)
+        if gene0 != "gene0":
+            return None
+        pos_gene0 = int(pos)
+        ref, alt = change.split(">", 1)
+        return {
+            "snv_id": None,
+            "disease_id": disease_id,
+            "gene_id": gene,
+            "pos_gene0": pos_gene0,
+            "ref": ref,
+            "alt": alt,
+            "note": None,
+            "is_representative": True,
+            "_chrom": None,
+            "_pos1": None,
+        }
+    except Exception:
+        return None

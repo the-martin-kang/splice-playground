@@ -1,77 +1,47 @@
-# app/db/repositories/state_repo.py
 from __future__ import annotations
 
-import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from app.db.supabase_client import DBNotFoundError, execute, ensure_list, ensure_one, get_supabase_client
+from app.db.supabase_client import get_supabase_client
+from app.db.repositories._helpers import first_or_none, unwrap_execute_result
 
 
-class StateRepo:
-    TABLE = "user_state"
+def create_state(
+    disease_id: str,
+    *,
+    gene_id: Optional[str] = None,
+    applied_edit: Optional[dict] = None,
+    parent_state_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    sb = get_supabase_client()
+    payload: Dict[str, Any] = {"disease_id": disease_id}
+    if gene_id is not None:
+        payload["gene_id"] = gene_id
+    if parent_state_id:
+        payload["parent_state_id"] = parent_state_id
+    if applied_edit is not None:
+        payload["applied_edit"] = applied_edit
 
-    DEFAULT_SELECT = "state_id,disease_id,gene_id,parent_state_id,applied_edit,created_at,updated_at"
+    try:
+        res = sb.table("user_state").insert(payload).execute()
+    except Exception as e:
+        msg = str(e)
+        # Backward compatibility: if the deployed table does not have gene_id, retry without it.
+        if gene_id is not None and ("gene_id" in msg and ("column" in msg or "schema cache" in msg or "record" in msg)):
+            payload.pop("gene_id", None)
+            res = sb.table("user_state").insert(payload).execute()
+        else:
+            raise
 
-    @staticmethod
-    def create_state(
-        *,
-        disease_id: str,
-        gene_id: str,
-        applied_edit: Dict[str, Any],
-        parent_state_id: Optional[str] = None,
-    ) -> str:
-        """
-        Create a user_state row and return state_id.
+    data, _, _ = unwrap_execute_result(res)
+    row = first_or_none(data)
+    if not row:
+        raise RuntimeError("Failed to create user_state (no row returned)")
+    return row
 
-        IMPORTANT:
-        - PostgREST insert returning이 환경에 따라 달라질 수 있어서,
-          여기서는 state_id를 서버에서 생성해서 안정적으로 반환한다.
-        """
-        sb = get_supabase_client()
-        state_id = str(uuid.uuid4())
 
-        payload: Dict[str, Any] = {
-            "state_id": state_id,
-            "disease_id": disease_id,
-            "gene_id": gene_id,
-            "parent_state_id": parent_state_id,
-            "applied_edit": applied_edit,
-        }
-
-        # insert가 실패하면 execute()에서 예외 발생
-        q = sb.table(StateRepo.TABLE).insert(payload)
-        execute(q)
-
-        return state_id
-
-    @staticmethod
-    def get_state_by_id(
-        state_id: str,
-        *,
-        select: str = DEFAULT_SELECT,
-    ) -> Dict[str, Any]:
-        sb = get_supabase_client()
-        q = sb.table(StateRepo.TABLE).select(select).eq("state_id", state_id).limit(1)
-        res = execute(q)
-        rows = ensure_list(res.data)
-        return ensure_one(rows, not_found_message=f"user_state not found: {state_id}")
-
-    @staticmethod
-    def list_states_by_disease(
-        disease_id: str,
-        *,
-        limit: int = 50,
-        offset: int = 0,
-        select: str = DEFAULT_SELECT,
-        newest_first: bool = True,
-    ) -> List[Dict[str, Any]]:
-        sb = get_supabase_client()
-        q = (
-            sb.table(StateRepo.TABLE)
-            .select(select)
-            .eq("disease_id", disease_id)
-            .order("created_at", desc=newest_first)
-            .range(offset, offset + max(limit, 1) - 1)
-        )
-        res = execute(q)
-        return ensure_list(res.data)
+def get_state(state_id: str) -> Optional[Dict[str, Any]]:
+    sb = get_supabase_client()
+    res = sb.table("user_state").select("*").eq("state_id", state_id).limit(1).execute()
+    data, _, _ = unwrap_execute_result(res)
+    return first_or_none(data)

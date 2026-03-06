@@ -1,0 +1,57 @@
+{
+  "core_len": 5000,
+  "flank": 10000,
+  "input_len": 15000,
+  "test_chrs": [
+    "1",
+    "3",
+    "5",
+    "7",
+    "9"
+  ],
+  "val_frac": 0.1,
+  "val_seed": 42,
+  "splits": {
+    "train": 162063,
+    "val": 18649,
+    "test": 12304
+  },
+  "label_counts": {
+    "train": [
+      810081883,
+      116556,
+      116561
+    ],
+    "val": [
+      93220018,
+      12491,
+      12491
+    ],
+    "test": [
+      61501547,
+      9226,
+      9227
+    ]
+  },
+  "motif": {
+    "train": {},
+    "val": {},
+    "test": {},
+    "donor": {
+      "GT": 136994,
+      "GC": 1059,
+      "other": 226,
+      "total": 138279
+    },
+    "acceptor": {
+      "AG": 138051,
+      "other": 222,
+      "total": 138273
+    }
+  },
+  "skipped": {
+    "nonprimary_chrom": 62,
+    "paralog_in_test": 4385,
+    "no_sequence": 0
+  }
+}

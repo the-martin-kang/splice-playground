@@ -1,0 +1,1001 @@
+{
+  "inputs": {
+    "selected": "/Users/martin/Git/splice-playground/scrpts/supabase_upload/data/selected_gene.tsv",
+    "annotation": "/Users/martin/Git/splice-playground/scrpts/supabase_upload/data/refannotation_with_canonical.tsv",
+    "fasta": "/Users/martin/Git/splice-playground/scrpts/supabase_upload/data/GRCh38.primary_assembly.genome.fa",
+    "model": "/Users/martin/Git/splice-playground/scrpts/model/mission5.pt",
+    "backend_url": "https://mmnamcwi3y.ap-northeast-1.awsapprunner.com"
+  },
+  "variants": [
+    {
+      "gene": "CFTR",
+      "chrom": "7",
+      "pos_1b": 117589467,
+      "strand": "+",
+      "tx_start": 117480025,
+      "tx_end": 117668665,
+      "variant_score": 0.9343882203102112,
+      "backend_sequence_match": {
+        "ref": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        },
+        "alt": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        }
+      },
+      "site_calls": {
+        "donor": [
+          {
+            "kind": "donor",
+            "idx0": 366,
+            "genomic_1b": 117587833,
+            "prob": 0.984982430934906,
+            "motif": "GT",
+            "snapped_from_idx0": 366,
+            "cut_left_idx0": 366,
+            "cut_right_idx0": 367,
+            "cut_left_genomic_1b": 117587833,
+            "cut_right_genomic_1b": 117587834,
+            "nearest_annot_1b": 117587833,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 2972,
+            "genomic_1b": 117590439,
+            "prob": 0.02403879538178444,
+            "motif": "GT",
+            "snapped_from_idx0": 2972,
+            "cut_left_idx0": 2972,
+            "cut_right_idx0": 2973,
+            "cut_left_genomic_1b": 117590439,
+            "cut_right_genomic_1b": 117590440,
+            "nearest_annot_1b": 117590439,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 2003,
+            "genomic_1b": 117589470,
+            "prob": 0.009616700001060963,
+            "motif": "GT",
+            "snapped_from_idx0": 2003,
+            "cut_left_idx0": 2003,
+            "cut_right_idx0": 2004,
+            "cut_left_genomic_1b": 117589470,
+            "cut_right_genomic_1b": 117589471,
+            "nearest_annot_1b": 117590439,
+            "delta_to_nearest_annot": -969
+          },
+          {
+            "kind": "donor",
+            "idx0": 2003,
+            "genomic_1b": 117589470,
+            "prob": 0.009616700001060963,
+            "motif": "GT",
+            "snapped_from_idx0": 2008,
+            "cut_left_idx0": 2003,
+            "cut_right_idx0": 2004,
+            "cut_left_genomic_1b": 117589470,
+            "cut_right_genomic_1b": 117589471,
+            "nearest_annot_1b": 117590439,
+            "delta_to_nearest_annot": -969
+          },
+          {
+            "kind": "donor",
+            "idx0": 352,
+            "genomic_1b": 117587819,
+            "prob": 0.0012648690026253462,
+            "motif": "AT",
+            "snapped_from_idx0": null,
+            "cut_left_idx0": 352,
+            "cut_right_idx0": 353,
+            "cut_left_genomic_1b": 117587819,
+            "cut_right_genomic_1b": 117587820,
+            "nearest_annot_1b": 117587833,
+            "delta_to_nearest_annot": -14
+          }
+        ],
+        "acceptor": [
+          {
+            "kind": "acceptor",
+            "idx0": 272,
+            "genomic_1b": 117587739,
+            "prob": 0.7153892517089844,
+            "motif": "AG",
+            "snapped_from_idx0": 272,
+            "cut_left_idx0": 271,
+            "cut_right_idx0": 272,
+            "cut_left_genomic_1b": 117587738,
+            "cut_right_genomic_1b": 117587739,
+            "nearest_annot_1b": 117587739,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2886,
+            "genomic_1b": 117590353,
+            "prob": 0.007734077051281929,
+            "motif": "AG",
+            "snapped_from_idx0": 2886,
+            "cut_left_idx0": 2885,
+            "cut_right_idx0": 2886,
+            "cut_left_genomic_1b": 117590352,
+            "cut_right_genomic_1b": 117590353,
+            "nearest_annot_1b": 117590353,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 265,
+            "genomic_1b": 117587732,
+            "prob": 0.006429104600101709,
+            "motif": "TG",
+            "snapped_from_idx0": null,
+            "cut_left_idx0": 264,
+            "cut_right_idx0": 265,
+            "cut_left_genomic_1b": 117587731,
+            "cut_right_genomic_1b": 117587732,
+            "nearest_annot_1b": 117587739,
+            "delta_to_nearest_annot": -7
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 3982,
+            "genomic_1b": 117591449,
+            "prob": 0.003088447032496333,
+            "motif": "AG",
+            "snapped_from_idx0": 3982,
+            "cut_left_idx0": 3981,
+            "cut_right_idx0": 3982,
+            "cut_left_genomic_1b": 117591448,
+            "cut_right_genomic_1b": 117591449,
+            "nearest_annot_1b": 117591934,
+            "delta_to_nearest_annot": -485
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 1243,
+            "genomic_1b": 117588710,
+            "prob": 0.0025768026243895292,
+            "motif": "AG",
+            "snapped_from_idx0": 1243,
+            "cut_left_idx0": 1242,
+            "cut_right_idx0": 1243,
+            "cut_left_genomic_1b": 117588709,
+            "cut_right_genomic_1b": 117588710,
+            "nearest_annot_1b": 117587739,
+            "delta_to_nearest_annot": 971
+          }
+        ]
+      }
+    },
+    {
+      "gene": "DNM1",
+      "chrom": "9",
+      "pos_1b": 128226027,
+      "strand": "+",
+      "tx_start": 128203379,
+      "tx_end": 128255244,
+      "variant_score": 2.6566622257232666,
+      "backend_sequence_match": {
+        "ref": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        },
+        "alt": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        }
+      },
+      "site_calls": {
+        "donor": [
+          {
+            "kind": "donor",
+            "idx0": 362,
+            "genomic_1b": 128224389,
+            "prob": 0.9947047829627991,
+            "motif": "GT",
+            "snapped_from_idx0": 362,
+            "cut_left_idx0": 362,
+            "cut_right_idx0": 363,
+            "cut_left_genomic_1b": 128224389,
+            "cut_right_genomic_1b": 128224390,
+            "nearest_annot_1b": 128224389,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 2146,
+            "genomic_1b": 128226173,
+            "prob": 0.9407168030738831,
+            "motif": "GT",
+            "snapped_from_idx0": 2146,
+            "cut_left_idx0": 2146,
+            "cut_right_idx0": 2147,
+            "cut_left_genomic_1b": 128226173,
+            "cut_right_genomic_1b": 128226174,
+            "nearest_annot_1b": 128224389,
+            "delta_to_nearest_annot": 1784
+          },
+          {
+            "kind": "donor",
+            "idx0": 2877,
+            "genomic_1b": 128226904,
+            "prob": 0.06677365303039551,
+            "motif": "GT",
+            "snapped_from_idx0": 2877,
+            "cut_left_idx0": 2877,
+            "cut_right_idx0": 2878,
+            "cut_left_genomic_1b": 128226904,
+            "cut_right_genomic_1b": 128226905,
+            "nearest_annot_1b": 128224389,
+            "delta_to_nearest_annot": 2515
+          },
+          {
+            "kind": "donor",
+            "idx0": 2920,
+            "genomic_1b": 128226947,
+            "prob": 0.0020072401966899633,
+            "motif": "GT",
+            "snapped_from_idx0": 2920,
+            "cut_left_idx0": 2920,
+            "cut_right_idx0": 2921,
+            "cut_left_genomic_1b": 128226947,
+            "cut_right_genomic_1b": 128226948,
+            "nearest_annot_1b": 128224389,
+            "delta_to_nearest_annot": 2558
+          },
+          {
+            "kind": "donor",
+            "idx0": 903,
+            "genomic_1b": 128224930,
+            "prob": 0.0018649043049663305,
+            "motif": "GT",
+            "snapped_from_idx0": 903,
+            "cut_left_idx0": 903,
+            "cut_right_idx0": 904,
+            "cut_left_genomic_1b": 128224930,
+            "cut_right_genomic_1b": 128224931,
+            "nearest_annot_1b": 128224389,
+            "delta_to_nearest_annot": 541
+          }
+        ],
+        "acceptor": [
+          {
+            "kind": "acceptor",
+            "idx0": 224,
+            "genomic_1b": 128224251,
+            "prob": 0.5949249267578125,
+            "motif": "AG",
+            "snapped_from_idx0": 224,
+            "cut_left_idx0": 223,
+            "cut_right_idx0": 224,
+            "cut_left_genomic_1b": 128224250,
+            "cut_right_genomic_1b": 128224251,
+            "nearest_annot_1b": 128224251,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2008,
+            "genomic_1b": 128226035,
+            "prob": 0.2789042592048645,
+            "motif": "AG",
+            "snapped_from_idx0": 2008,
+            "cut_left_idx0": 2007,
+            "cut_right_idx0": 2008,
+            "cut_left_genomic_1b": 128226034,
+            "cut_right_genomic_1b": 128226035,
+            "nearest_annot_1b": 128224251,
+            "delta_to_nearest_annot": 1784
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 244,
+            "genomic_1b": 128224271,
+            "prob": 0.18533387780189514,
+            "motif": "AG",
+            "snapped_from_idx0": 244,
+            "cut_left_idx0": 243,
+            "cut_right_idx0": 244,
+            "cut_left_genomic_1b": 128224270,
+            "cut_right_genomic_1b": 128224271,
+            "nearest_annot_1b": 128224251,
+            "delta_to_nearest_annot": 20
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2043,
+            "genomic_1b": 128226070,
+            "prob": 0.026991812512278557,
+            "motif": "AG",
+            "snapped_from_idx0": 2043,
+            "cut_left_idx0": 2042,
+            "cut_right_idx0": 2043,
+            "cut_left_genomic_1b": 128226069,
+            "cut_right_genomic_1b": 128226070,
+            "nearest_annot_1b": 128224251,
+            "delta_to_nearest_annot": 1819
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2049,
+            "genomic_1b": 128226076,
+            "prob": 0.015866966918110847,
+            "motif": "AG",
+            "snapped_from_idx0": 2049,
+            "cut_left_idx0": 2048,
+            "cut_right_idx0": 2049,
+            "cut_left_genomic_1b": 128226075,
+            "cut_right_genomic_1b": 128226076,
+            "nearest_annot_1b": 128224251,
+            "delta_to_nearest_annot": 1825
+          }
+        ]
+      }
+    },
+    {
+      "gene": "MSH2",
+      "chrom": "2",
+      "pos_1b": 47407923,
+      "strand": "+",
+      "tx_start": 47403067,
+      "tx_end": 47709830,
+      "variant_score": 3.997579574584961,
+      "backend_sequence_match": {
+        "ref": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        },
+        "alt": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        }
+      },
+      "site_calls": {
+        "donor": [
+          {
+            "kind": "donor",
+            "idx0": 2632,
+            "genomic_1b": 47408555,
+            "prob": 0.9966829419136047,
+            "motif": "GT",
+            "snapped_from_idx0": 2632,
+            "cut_left_idx0": 2632,
+            "cut_right_idx0": 2633,
+            "cut_left_genomic_1b": 47408555,
+            "cut_right_genomic_1b": 47408556,
+            "nearest_annot_1b": 47408555,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 769,
+            "genomic_1b": 47406692,
+            "prob": 0.10647532343864441,
+            "motif": "GT",
+            "snapped_from_idx0": 769,
+            "cut_left_idx0": 769,
+            "cut_right_idx0": 770,
+            "cut_left_genomic_1b": 47406692,
+            "cut_right_genomic_1b": 47406693,
+            "nearest_annot_1b": 47408555,
+            "delta_to_nearest_annot": -1863
+          },
+          {
+            "kind": "donor",
+            "idx0": 3990,
+            "genomic_1b": 47409913,
+            "prob": 0.011557498015463352,
+            "motif": "GT",
+            "snapped_from_idx0": 3990,
+            "cut_left_idx0": 3990,
+            "cut_right_idx0": 3991,
+            "cut_left_genomic_1b": 47409913,
+            "cut_right_genomic_1b": 47409914,
+            "nearest_annot_1b": 47410372,
+            "delta_to_nearest_annot": -459
+          },
+          {
+            "kind": "donor",
+            "idx0": 181,
+            "genomic_1b": 47406104,
+            "prob": 0.009992880746722221,
+            "motif": "GT",
+            "snapped_from_idx0": 181,
+            "cut_left_idx0": 181,
+            "cut_right_idx0": 182,
+            "cut_left_genomic_1b": 47406104,
+            "cut_right_genomic_1b": 47406105,
+            "nearest_annot_1b": 47408555,
+            "delta_to_nearest_annot": -2451
+          },
+          {
+            "kind": "donor",
+            "idx0": 2386,
+            "genomic_1b": 47408309,
+            "prob": 0.00455089146271348,
+            "motif": "GT",
+            "snapped_from_idx0": 2386,
+            "cut_left_idx0": 2386,
+            "cut_right_idx0": 2387,
+            "cut_left_genomic_1b": 47408309,
+            "cut_right_genomic_1b": 47408310,
+            "nearest_annot_1b": 47408555,
+            "delta_to_nearest_annot": -246
+          }
+        ],
+        "acceptor": [
+          {
+            "kind": "acceptor",
+            "idx0": 2478,
+            "genomic_1b": 47408401,
+            "prob": 0.9979332685470581,
+            "motif": "AG",
+            "snapped_from_idx0": 2478,
+            "cut_left_idx0": 2477,
+            "cut_right_idx0": 2478,
+            "cut_left_genomic_1b": 47408400,
+            "cut_right_genomic_1b": 47408401,
+            "nearest_annot_1b": 47408401,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 1925,
+            "genomic_1b": 47407848,
+            "prob": 0.0059706829488277435,
+            "motif": "AG",
+            "snapped_from_idx0": 1925,
+            "cut_left_idx0": 1924,
+            "cut_right_idx0": 1925,
+            "cut_left_genomic_1b": 47407847,
+            "cut_right_genomic_1b": 47407848,
+            "nearest_annot_1b": 47408401,
+            "delta_to_nearest_annot": -553
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2538,
+            "genomic_1b": 47408461,
+            "prob": 0.0033762932289391756,
+            "motif": "AG",
+            "snapped_from_idx0": 2538,
+            "cut_left_idx0": 2537,
+            "cut_right_idx0": 2538,
+            "cut_left_genomic_1b": 47408460,
+            "cut_right_genomic_1b": 47408461,
+            "nearest_annot_1b": 47408401,
+            "delta_to_nearest_annot": 60
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2478,
+            "genomic_1b": 47408401,
+            "prob": 0.9979332685470581,
+            "motif": "AG",
+            "snapped_from_idx0": 2479,
+            "cut_left_idx0": 2477,
+            "cut_right_idx0": 2478,
+            "cut_left_genomic_1b": 47408400,
+            "cut_right_genomic_1b": 47408401,
+            "nearest_annot_1b": 47408401,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 37,
+            "genomic_1b": 47405960,
+            "prob": 0.000919785350561142,
+            "motif": "AG",
+            "snapped_from_idx0": 37,
+            "cut_left_idx0": 36,
+            "cut_right_idx0": 37,
+            "cut_left_genomic_1b": 47405959,
+            "cut_right_genomic_1b": 47405960,
+            "nearest_annot_1b": 47408401,
+            "delta_to_nearest_annot": -2441
+          }
+        ]
+      }
+    },
+    {
+      "gene": "PMM2",
+      "chrom": "16",
+      "pos_1b": 8832245,
+      "strand": "+",
+      "tx_start": 8797839,
+      "tx_end": 8849325,
+      "variant_score": 3.743187427520752,
+      "backend_sequence_match": {
+        "ref": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        },
+        "alt": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        }
+      },
+      "site_calls": {
+        "donor": [
+          {
+            "kind": "donor",
+            "idx0": 2838,
+            "genomic_1b": 8833083,
+            "prob": 0.003499029204249382,
+            "motif": "GT",
+            "snapped_from_idx0": 2838,
+            "cut_left_idx0": 2838,
+            "cut_right_idx0": 2839,
+            "cut_left_genomic_1b": 8833083,
+            "cut_right_genomic_1b": 8833084,
+            "nearest_annot_1b": 8813106,
+            "delta_to_nearest_annot": 19977
+          },
+          {
+            "kind": "donor",
+            "idx0": 1998,
+            "genomic_1b": 8832243,
+            "prob": 0.000500990659929812,
+            "motif": "GC",
+            "snapped_from_idx0": 1998,
+            "cut_left_idx0": 1998,
+            "cut_right_idx0": 1999,
+            "cut_left_genomic_1b": 8832243,
+            "cut_right_genomic_1b": 8832244,
+            "nearest_annot_1b": 8813106,
+            "delta_to_nearest_annot": 19137
+          },
+          {
+            "kind": "donor",
+            "idx0": 2348,
+            "genomic_1b": 8832593,
+            "prob": 0.0004820058529730886,
+            "motif": "GT",
+            "snapped_from_idx0": 2348,
+            "cut_left_idx0": 2348,
+            "cut_right_idx0": 2349,
+            "cut_left_genomic_1b": 8832593,
+            "cut_right_genomic_1b": 8832594,
+            "nearest_annot_1b": 8813106,
+            "delta_to_nearest_annot": 19487
+          },
+          {
+            "kind": "donor",
+            "idx0": 1457,
+            "genomic_1b": 8831702,
+            "prob": 0.0002568438940215856,
+            "motif": "GT",
+            "snapped_from_idx0": 1457,
+            "cut_left_idx0": 1457,
+            "cut_right_idx0": 1458,
+            "cut_left_genomic_1b": 8831702,
+            "cut_right_genomic_1b": 8831703,
+            "nearest_annot_1b": 8813106,
+            "delta_to_nearest_annot": 18596
+          },
+          {
+            "kind": "donor",
+            "idx0": 212,
+            "genomic_1b": 8830457,
+            "prob": 0.00023415144823957235,
+            "motif": "GT",
+            "snapped_from_idx0": 212,
+            "cut_left_idx0": 212,
+            "cut_right_idx0": 213,
+            "cut_left_genomic_1b": 8830457,
+            "cut_right_genomic_1b": 8830458,
+            "nearest_annot_1b": 8813106,
+            "delta_to_nearest_annot": 17351
+          }
+        ],
+        "acceptor": [
+          {
+            "kind": "acceptor",
+            "idx0": 1876,
+            "genomic_1b": 8832121,
+            "prob": 0.027934467419981956,
+            "motif": "AG",
+            "snapped_from_idx0": 1876,
+            "cut_left_idx0": 1875,
+            "cut_right_idx0": 1876,
+            "cut_left_genomic_1b": 8832120,
+            "cut_right_genomic_1b": 8832121,
+            "nearest_annot_1b": 8847724,
+            "delta_to_nearest_annot": -15603
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 56,
+            "genomic_1b": 8830301,
+            "prob": 0.0003976736043114215,
+            "motif": "AG",
+            "snapped_from_idx0": 56,
+            "cut_left_idx0": 55,
+            "cut_right_idx0": 56,
+            "cut_left_genomic_1b": 8830300,
+            "cut_right_genomic_1b": 8830301,
+            "nearest_annot_1b": 8812991,
+            "delta_to_nearest_annot": 17310
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2488,
+            "genomic_1b": 8832733,
+            "prob": 0.00033367009018547833,
+            "motif": "AG",
+            "snapped_from_idx0": 2488,
+            "cut_left_idx0": 2487,
+            "cut_right_idx0": 2488,
+            "cut_left_genomic_1b": 8832732,
+            "cut_right_genomic_1b": 8832733,
+            "nearest_annot_1b": 8847724,
+            "delta_to_nearest_annot": -14991
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2335,
+            "genomic_1b": 8832580,
+            "prob": 0.0002223830670118332,
+            "motif": "AG",
+            "snapped_from_idx0": 2335,
+            "cut_left_idx0": 2334,
+            "cut_right_idx0": 2335,
+            "cut_left_genomic_1b": 8832579,
+            "cut_right_genomic_1b": 8832580,
+            "nearest_annot_1b": 8847724,
+            "delta_to_nearest_annot": -15144
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 1634,
+            "genomic_1b": 8831879,
+            "prob": 0.00016202215920202434,
+            "motif": "AG",
+            "snapped_from_idx0": 1634,
+            "cut_left_idx0": 1633,
+            "cut_right_idx0": 1634,
+            "cut_left_genomic_1b": 8831878,
+            "cut_right_genomic_1b": 8831879,
+            "nearest_annot_1b": 8847724,
+            "delta_to_nearest_annot": -15845
+          }
+        ]
+      }
+    },
+    {
+      "gene": "TSC2",
+      "chrom": "16",
+      "pos_1b": 2057459,
+      "strand": "+",
+      "tx_start": 2047985,
+      "tx_end": 2089491,
+      "variant_score": 3.3039753437042236,
+      "backend_sequence_match": {
+        "ref": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        },
+        "alt": {
+          "ok": true,
+          "first_mismatch_idx0": null
+        }
+      },
+      "site_calls": {
+        "donor": [
+          {
+            "kind": "donor",
+            "idx0": 1719,
+            "genomic_1b": 2057178,
+            "prob": 0.9996335506439209,
+            "motif": "GT",
+            "snapped_from_idx0": 1719,
+            "cut_left_idx0": 1719,
+            "cut_right_idx0": 1720,
+            "cut_left_genomic_1b": 2057178,
+            "cut_right_genomic_1b": 2057179,
+            "nearest_annot_1b": 2057178,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 3414,
+            "genomic_1b": 2058873,
+            "prob": 0.9968675971031189,
+            "motif": "GT",
+            "snapped_from_idx0": 3414,
+            "cut_left_idx0": 3414,
+            "cut_right_idx0": 3415,
+            "cut_left_genomic_1b": 2058873,
+            "cut_right_genomic_1b": 2058874,
+            "nearest_annot_1b": 2058873,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 785,
+            "genomic_1b": 2056244,
+            "prob": 0.987236738204956,
+            "motif": "GT",
+            "snapped_from_idx0": 785,
+            "cut_left_idx0": 785,
+            "cut_right_idx0": 786,
+            "cut_left_genomic_1b": 2056244,
+            "cut_right_genomic_1b": 2056245,
+            "nearest_annot_1b": 2056244,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 1310,
+            "genomic_1b": 2056769,
+            "prob": 0.9838502407073975,
+            "motif": "GT",
+            "snapped_from_idx0": 1310,
+            "cut_left_idx0": 1310,
+            "cut_right_idx0": 1311,
+            "cut_left_genomic_1b": 2056769,
+            "cut_right_genomic_1b": 2056770,
+            "nearest_annot_1b": 2056769,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 1337,
+            "genomic_1b": 2056796,
+            "prob": 0.362003356218338,
+            "motif": "GT",
+            "snapped_from_idx0": 1337,
+            "cut_left_idx0": 1337,
+            "cut_right_idx0": 1338,
+            "cut_left_genomic_1b": 2056796,
+            "cut_right_genomic_1b": 2056797,
+            "nearest_annot_1b": 2056769,
+            "delta_to_nearest_annot": 27
+          }
+        ],
+        "acceptor": [
+          {
+            "kind": "acceptor",
+            "idx0": 1646,
+            "genomic_1b": 2057105,
+            "prob": 0.9998078942298889,
+            "motif": "AG",
+            "snapped_from_idx0": 1646,
+            "cut_left_idx0": 1645,
+            "cut_right_idx0": 1646,
+            "cut_left_genomic_1b": 2057104,
+            "cut_right_genomic_1b": 2057105,
+            "nearest_annot_1b": 2057105,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 737,
+            "genomic_1b": 2056196,
+            "prob": 0.9776401519775391,
+            "motif": "AG",
+            "snapped_from_idx0": 737,
+            "cut_left_idx0": 736,
+            "cut_right_idx0": 737,
+            "cut_left_genomic_1b": 2056195,
+            "cut_right_genomic_1b": 2056196,
+            "nearest_annot_1b": 2056196,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 1185,
+            "genomic_1b": 2056644,
+            "prob": 0.9752457141876221,
+            "motif": "AG",
+            "snapped_from_idx0": 1185,
+            "cut_left_idx0": 1184,
+            "cut_right_idx0": 1185,
+            "cut_left_genomic_1b": 2056643,
+            "cut_right_genomic_1b": 2056644,
+            "nearest_annot_1b": 2056644,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 1197,
+            "genomic_1b": 2056656,
+            "prob": 0.8375911712646484,
+            "motif": "AG",
+            "snapped_from_idx0": 1197,
+            "cut_left_idx0": 1196,
+            "cut_right_idx0": 1197,
+            "cut_left_genomic_1b": 2056655,
+            "cut_right_genomic_1b": 2056656,
+            "nearest_annot_1b": 2056644,
+            "delta_to_nearest_annot": 12
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 3288,
+            "genomic_1b": 2058747,
+            "prob": 0.40027472376823425,
+            "motif": "AG",
+            "snapped_from_idx0": 3288,
+            "cut_left_idx0": 3287,
+            "cut_right_idx0": 3288,
+            "cut_left_genomic_1b": 2058746,
+            "cut_right_genomic_1b": 2058747,
+            "nearest_annot_1b": 2058747,
+            "delta_to_nearest_annot": 0
+          }
+        ]
+      }
+    },
+    {
+      "gene": "SMN1",
+      "chrom": "5",
+      "pos_1b": 70951946,
+      "strand": "+",
+      "tx_start": 70924941,
+      "tx_end": 70966375,
+      "variant_score": 0.510156512260437,
+      "backend_sequence_match": {
+        "ref": {
+          "ok": false,
+          "first_mismatch_idx0": 3070
+        },
+        "alt": {
+          "ok": false,
+          "first_mismatch_idx0": 3070
+        }
+      },
+      "site_calls": {
+        "donor": [
+          {
+            "kind": "donor",
+            "idx0": 3333,
+            "genomic_1b": 70953279,
+            "prob": 0.9808719158172607,
+            "motif": "GT",
+            "snapped_from_idx0": 3333,
+            "cut_left_idx0": 3333,
+            "cut_right_idx0": 3334,
+            "cut_left_genomic_1b": 70953279,
+            "cut_right_genomic_1b": 70953280,
+            "nearest_annot_1b": 70951994,
+            "delta_to_nearest_annot": 1285
+          },
+          {
+            "kind": "donor",
+            "idx0": 2634,
+            "genomic_1b": 70952580,
+            "prob": 0.947717547416687,
+            "motif": "GT",
+            "snapped_from_idx0": 2634,
+            "cut_left_idx0": 2634,
+            "cut_right_idx0": 2635,
+            "cut_left_genomic_1b": 70952580,
+            "cut_right_genomic_1b": 70952581,
+            "nearest_annot_1b": 70951994,
+            "delta_to_nearest_annot": 586
+          },
+          {
+            "kind": "donor",
+            "idx0": 2048,
+            "genomic_1b": 70951994,
+            "prob": 0.9301919937133789,
+            "motif": "GT",
+            "snapped_from_idx0": 2048,
+            "cut_left_idx0": 2048,
+            "cut_right_idx0": 2049,
+            "cut_left_genomic_1b": 70951994,
+            "cut_right_genomic_1b": 70951995,
+            "nearest_annot_1b": 70951994,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "donor",
+            "idx0": 2099,
+            "genomic_1b": 70952045,
+            "prob": 0.5263875126838684,
+            "motif": "GT",
+            "snapped_from_idx0": 2099,
+            "cut_left_idx0": 2099,
+            "cut_right_idx0": 2100,
+            "cut_left_genomic_1b": 70952045,
+            "cut_right_genomic_1b": 70952046,
+            "nearest_annot_1b": 70951994,
+            "delta_to_nearest_annot": 51
+          },
+          {
+            "kind": "donor",
+            "idx0": 3715,
+            "genomic_1b": 70953661,
+            "prob": 0.082231305539608,
+            "motif": "GT",
+            "snapped_from_idx0": 3715,
+            "cut_left_idx0": 3715,
+            "cut_right_idx0": 3716,
+            "cut_left_genomic_1b": 70953661,
+            "cut_right_genomic_1b": 70953662,
+            "nearest_annot_1b": 70951994,
+            "delta_to_nearest_annot": 1667
+          }
+        ],
+        "acceptor": [
+          {
+            "kind": "acceptor",
+            "idx0": 1995,
+            "genomic_1b": 70951941,
+            "prob": 0.9993776679039001,
+            "motif": "AG",
+            "snapped_from_idx0": 1995,
+            "cut_left_idx0": 1994,
+            "cut_right_idx0": 1995,
+            "cut_left_genomic_1b": 70951940,
+            "cut_right_genomic_1b": 70951941,
+            "nearest_annot_1b": 70951941,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 2493,
+            "genomic_1b": 70952439,
+            "prob": 0.6424341201782227,
+            "motif": "AG",
+            "snapped_from_idx0": 2493,
+            "cut_left_idx0": 2492,
+            "cut_right_idx0": 2493,
+            "cut_left_genomic_1b": 70952438,
+            "cut_right_genomic_1b": 70952439,
+            "nearest_annot_1b": 70952439,
+            "delta_to_nearest_annot": 0
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 3236,
+            "genomic_1b": 70953182,
+            "prob": 0.24783994257450104,
+            "motif": "AG",
+            "snapped_from_idx0": 3236,
+            "cut_left_idx0": 3235,
+            "cut_right_idx0": 3236,
+            "cut_left_genomic_1b": 70953181,
+            "cut_right_genomic_1b": 70953182,
+            "nearest_annot_1b": 70952439,
+            "delta_to_nearest_annot": 743
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 3232,
+            "genomic_1b": 70953178,
+            "prob": 0.010291099548339844,
+            "motif": "AG",
+            "snapped_from_idx0": 3230,
+            "cut_left_idx0": 3231,
+            "cut_right_idx0": 3232,
+            "cut_left_genomic_1b": 70953177,
+            "cut_right_genomic_1b": 70953178,
+            "nearest_annot_1b": 70952439,
+            "delta_to_nearest_annot": 739
+          },
+          {
+            "kind": "acceptor",
+            "idx0": 3592,
+            "genomic_1b": 70953538,
+            "prob": 0.010730355978012085,
+            "motif": "AG",
+            "snapped_from_idx0": 3592,
+            "cut_left_idx0": 3591,
+            "cut_right_idx0": 3592,
+            "cut_left_genomic_1b": 70953537,
+            "cut_right_genomic_1b": 70953538,
+            "nearest_annot_1b": 70952439,
+            "delta_to_nearest_annot": 1099
+          }
+        ]
+      }
+    }
+  ]
+}

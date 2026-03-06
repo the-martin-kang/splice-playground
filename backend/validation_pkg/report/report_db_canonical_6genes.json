@@ -1,0 +1,4218 @@
+{
+  "meta": {
+    "backend_url": "https://mmnamcwi3y.ap-northeast-1.awsapprunner.com",
+    "model": "/Users/martin/Git/splice-playground/backend/app/ai_models/spliceai_window=10000.pt",
+    "annotation": "/Users/martin/Git/splice-playground/scrpts/supabase_upload/data/refannotation_with_canonical.tsv",
+    "fasta": "/Users/martin/Git/splice-playground/scrpts/supabase_upload/data/GRCh38.primary_assembly.genome.fa",
+    "flank_total": 10000,
+    "pad_each": 5000,
+    "device": null,
+    "batch_size": 1,
+    "allow_gap_pad": true,
+    "orf_sanity": true
+  },
+  "results": [
+    {
+      "disease_id": "CFTR_gene0_109442_A>G",
+      "disease_name": "Cystic fibrosis",
+      "gene_id": "CFTR",
+      "strand_db": "+",
+      "strand_annotation": "+",
+      "chrom": "chr7",
+      "tx_start_1b": 117480025,
+      "tx_end_1b": 117668665,
+      "gene_length": 188641,
+      "exon_count": 27,
+      "snv": {
+        "pos_gene0": 109442,
+        "ref": "A",
+        "alt": "G"
+      },
+      "sequence_check": {
+        "ok": true,
+        "len": 188641,
+        "covered_bases": 188641,
+        "covered_rate": 1.0,
+        "mismatch_count": 0,
+        "mismatch_samples": []
+      },
+      "exon_boundary_check": {
+        "ok": true,
+        "exon_count_db": 27,
+        "exon_count_annotation": 27,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "note": "Annotation exons are ordered in transcript order (+ asc, - desc)."
+      },
+      "model": {
+        "checkpoint": "/Users/martin/Git/splice-playground/backend/app/ai_models/spliceai_window=10000.pt",
+        "flank_total": 10000,
+        "pad_each": 5000,
+        "input_len": 198641,
+        "output_len": 188641
+      },
+      "canonical_sites": [
+        {
+          "kind": "exon1_donor",
+          "site_type": "donor",
+          "exon_number": 1,
+          "pos_gene0": 122,
+          "genomic_1b": 117480147,
+          "junction_cut_gene0": {
+            "left_gene0": 122,
+            "right_gene0": 123
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9607558250427246,
+          "rank": 26,
+          "percentile": 99.98674724342663
+        },
+        {
+          "kind": "exon2_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 2,
+          "pos_gene0": 24228,
+          "genomic_1b": 117504253,
+          "junction_cut_gene0": {
+            "left_gene0": 24227,
+            "right_gene0": 24228
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9929476976394653,
+          "rank": 24,
+          "percentile": 99.9878074639525
+        },
+        {
+          "kind": "exon2_donor",
+          "site_type": "donor",
+          "exon_number": 2,
+          "pos_gene0": 24338,
+          "genomic_1b": 117504363,
+          "junction_cut_gene0": {
+            "left_gene0": 24338,
+            "right_gene0": 24339
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.995564341545105,
+          "rank": 19,
+          "percentile": 99.99045801526718
+        },
+        {
+          "kind": "exon3_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 3,
+          "pos_gene0": 29009,
+          "genomic_1b": 117509034,
+          "junction_cut_gene0": {
+            "left_gene0": 29008,
+            "right_gene0": 29009
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9934239387512207,
+          "rank": 23,
+          "percentile": 99.98833757421544
+        },
+        {
+          "kind": "exon3_donor",
+          "site_type": "donor",
+          "exon_number": 3,
+          "pos_gene0": 29117,
+          "genomic_1b": 117509142,
+          "junction_cut_gene0": {
+            "left_gene0": 29117,
+            "right_gene0": 29118
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9974518418312073,
+          "rank": 15,
+          "percentile": 99.99257845631891
+        },
+        {
+          "kind": "exon4_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 4,
+          "pos_gene0": 50874,
+          "genomic_1b": 117530899,
+          "junction_cut_gene0": {
+            "left_gene0": 50873,
+            "right_gene0": 50874
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9941402077674866,
+          "rank": 20,
+          "percentile": 99.98992790500424
+        },
+        {
+          "kind": "exon4_donor",
+          "site_type": "donor",
+          "exon_number": 4,
+          "pos_gene0": 51089,
+          "genomic_1b": 117531114,
+          "junction_cut_gene0": {
+            "left_gene0": 51089,
+            "right_gene0": 51090
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9840471148490906,
+          "rank": 24,
+          "percentile": 99.9878074639525
+        },
+        {
+          "kind": "exon5_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 5,
+          "pos_gene0": 54251,
+          "genomic_1b": 117534276,
+          "junction_cut_gene0": {
+            "left_gene0": 54250,
+            "right_gene0": 54251
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9998082518577576,
+          "rank": 2,
+          "percentile": 99.99946988973707
+        },
+        {
+          "kind": "exon5_donor",
+          "site_type": "donor",
+          "exon_number": 5,
+          "pos_gene0": 54340,
+          "genomic_1b": 117534365,
+          "junction_cut_gene0": {
+            "left_gene0": 54340,
+            "right_gene0": 54341
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999008178710938,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon6_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 6,
+          "pos_gene0": 55223,
+          "genomic_1b": 117535248,
+          "junction_cut_gene0": {
+            "left_gene0": 55222,
+            "right_gene0": 55223
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9979335069656372,
+          "rank": 16,
+          "percentile": 99.99204834605598
+        },
+        {
+          "kind": "exon6_donor",
+          "site_type": "donor",
+          "exon_number": 6,
+          "pos_gene0": 55386,
+          "genomic_1b": 117535411,
+          "junction_cut_gene0": {
+            "left_gene0": 55386,
+            "right_gene0": 55387
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9867977499961853,
+          "rank": 22,
+          "percentile": 99.98886768447836
+        },
+        {
+          "kind": "exon7_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 7,
+          "pos_gene0": 56523,
+          "genomic_1b": 117536548,
+          "junction_cut_gene0": {
+            "left_gene0": 56522,
+            "right_gene0": 56523
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9997220635414124,
+          "rank": 3,
+          "percentile": 99.99893977947413
+        },
+        {
+          "kind": "exon7_donor",
+          "site_type": "donor",
+          "exon_number": 7,
+          "pos_gene0": 56648,
+          "genomic_1b": 117536673,
+          "junction_cut_gene0": {
+            "left_gene0": 56648,
+            "right_gene0": 56649
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997252821922302,
+          "rank": 4,
+          "percentile": 99.9984096692112
+        },
+        {
+          "kind": "exon8_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 8,
+          "pos_gene0": 60075,
+          "genomic_1b": 117540100,
+          "junction_cut_gene0": {
+            "left_gene0": 60074,
+            "right_gene0": 60075
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9883785843849182,
+          "rank": 25,
+          "percentile": 99.98727735368956
+        },
+        {
+          "kind": "exon8_donor",
+          "site_type": "donor",
+          "exon_number": 8,
+          "pos_gene0": 60321,
+          "genomic_1b": 117540346,
+          "junction_cut_gene0": {
+            "left_gene0": 60321,
+            "right_gene0": 60322
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9899223446846008,
+          "rank": 21,
+          "percentile": 99.98939779474131
+        },
+        {
+          "kind": "exon9_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 9,
+          "pos_gene0": 61991,
+          "genomic_1b": 117542016,
+          "junction_cut_gene0": {
+            "left_gene0": 61990,
+            "right_gene0": 61991
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9995030164718628,
+          "rank": 6,
+          "percentile": 99.99734944868533
+        },
+        {
+          "kind": "exon9_donor",
+          "site_type": "donor",
+          "exon_number": 9,
+          "pos_gene0": 62083,
+          "genomic_1b": 117542108,
+          "junction_cut_gene0": {
+            "left_gene0": 62083,
+            "right_gene0": 62084
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994288086891174,
+          "rank": 6,
+          "percentile": 99.99734944868533
+        },
+        {
+          "kind": "exon10_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 10,
+          "pos_gene0": 68616,
+          "genomic_1b": 117548641,
+          "junction_cut_gene0": {
+            "left_gene0": 68615,
+            "right_gene0": 68616
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9991037249565125,
+          "rank": 9,
+          "percentile": 99.99575911789653
+        },
+        {
+          "kind": "exon10_donor",
+          "site_type": "donor",
+          "exon_number": 10,
+          "pos_gene0": 68798,
+          "genomic_1b": 117548823,
+          "junction_cut_gene0": {
+            "left_gene0": 68798,
+            "right_gene0": 68799
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9973624348640442,
+          "rank": 16,
+          "percentile": 99.99204834605598
+        },
+        {
+          "kind": "exon11_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 11,
+          "pos_gene0": 79439,
+          "genomic_1b": 117559464,
+          "junction_cut_gene0": {
+            "left_gene0": 79438,
+            "right_gene0": 79439
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9995520710945129,
+          "rank": 4,
+          "percentile": 99.9984096692112
+        },
+        {
+          "kind": "exon11_donor",
+          "site_type": "donor",
+          "exon_number": 11,
+          "pos_gene0": 79630,
+          "genomic_1b": 117559655,
+          "junction_cut_gene0": {
+            "left_gene0": 79630,
+            "right_gene0": 79631
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997279047966003,
+          "rank": 3,
+          "percentile": 99.99893977947413
+        },
+        {
+          "kind": "exon12_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 12,
+          "pos_gene0": 107714,
+          "genomic_1b": 117587739,
+          "junction_cut_gene0": {
+            "left_gene0": 107713,
+            "right_gene0": 107714
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9990755319595337,
+          "rank": 10,
+          "percentile": 99.9952290076336
+        },
+        {
+          "kind": "exon12_donor",
+          "site_type": "donor",
+          "exon_number": 12,
+          "pos_gene0": 107808,
+          "genomic_1b": 117587833,
+          "junction_cut_gene0": {
+            "left_gene0": 107808,
+            "right_gene0": 107809
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9987381100654602,
+          "rank": 8,
+          "percentile": 99.99628922815945
+        },
+        {
+          "kind": "exon13_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 13,
+          "pos_gene0": 110328,
+          "genomic_1b": 117590353,
+          "junction_cut_gene0": {
+            "left_gene0": 110327,
+            "right_gene0": 110328
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9941086769104004,
+          "rank": 21,
+          "percentile": 99.98939779474131
+        },
+        {
+          "kind": "exon13_donor",
+          "site_type": "donor",
+          "exon_number": 13,
+          "pos_gene0": 110414,
+          "genomic_1b": 117590439,
+          "junction_cut_gene0": {
+            "left_gene0": 110414,
+            "right_gene0": 110415
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9982126951217651,
+          "rank": 13,
+          "percentile": 99.99363867684478
+        },
+        {
+          "kind": "exon14_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 14,
+          "pos_gene0": 111909,
+          "genomic_1b": 117591934,
+          "junction_cut_gene0": {
+            "left_gene0": 111908,
+            "right_gene0": 111909
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9846046566963196,
+          "rank": 26,
+          "percentile": 99.98674724342663
+        },
+        {
+          "kind": "exon14_donor",
+          "site_type": "donor",
+          "exon_number": 14,
+          "pos_gene0": 112632,
+          "genomic_1b": 117592657,
+          "junction_cut_gene0": {
+            "left_gene0": 112632,
+            "right_gene0": 112633
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9995521903038025,
+          "rank": 5,
+          "percentile": 99.99787955894827
+        },
+        {
+          "kind": "exon15_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 15,
+          "pos_gene0": 114905,
+          "genomic_1b": 117594930,
+          "junction_cut_gene0": {
+            "left_gene0": 114904,
+            "right_gene0": 114905
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9972702860832214,
+          "rank": 18,
+          "percentile": 99.99098812553011
+        },
+        {
+          "kind": "exon15_donor",
+          "site_type": "donor",
+          "exon_number": 15,
+          "pos_gene0": 115033,
+          "genomic_1b": 117595058,
+          "junction_cut_gene0": {
+            "left_gene0": 115033,
+            "right_gene0": 115034
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9979472756385803,
+          "rank": 14,
+          "percentile": 99.99310856658184
+        },
+        {
+          "kind": "exon16_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 16,
+          "pos_gene0": 122801,
+          "genomic_1b": 117602826,
+          "junction_cut_gene0": {
+            "left_gene0": 122800,
+            "right_gene0": 122801
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9986149072647095,
+          "rank": 12,
+          "percentile": 99.99416878710772
+        },
+        {
+          "kind": "exon16_donor",
+          "site_type": "donor",
+          "exon_number": 16,
+          "pos_gene0": 122838,
+          "genomic_1b": 117602863,
+          "junction_cut_gene0": {
+            "left_gene0": 122838,
+            "right_gene0": 122839
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9983909130096436,
+          "rank": 12,
+          "percentile": 99.99416878710772
+        },
+        {
+          "kind": "exon17_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 17,
+          "pos_gene0": 123507,
+          "genomic_1b": 117603532,
+          "junction_cut_gene0": {
+            "left_gene0": 123506,
+            "right_gene0": 123507
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9974115490913391,
+          "rank": 17,
+          "percentile": 99.99151823579304
+        },
+        {
+          "kind": "exon17_donor",
+          "site_type": "donor",
+          "exon_number": 17,
+          "pos_gene0": 123757,
+          "genomic_1b": 117603782,
+          "junction_cut_gene0": {
+            "left_gene0": 123757,
+            "right_gene0": 123758
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9855310916900635,
+          "rank": 23,
+          "percentile": 99.98833757421544
+        },
+        {
+          "kind": "exon18_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 18,
+          "pos_gene0": 126649,
+          "genomic_1b": 117606674,
+          "junction_cut_gene0": {
+            "left_gene0": 126648,
+            "right_gene0": 126649
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9935112595558167,
+          "rank": 22,
+          "percentile": 99.98886768447836
+        },
+        {
+          "kind": "exon18_donor",
+          "site_type": "donor",
+          "exon_number": 18,
+          "pos_gene0": 126728,
+          "genomic_1b": 117606753,
+          "junction_cut_gene0": {
+            "left_gene0": 126728,
+            "right_gene0": 126729
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998151659965515,
+          "rank": 2,
+          "percentile": 99.99946988973707
+        },
+        {
+          "kind": "exon19_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 19,
+          "pos_gene0": 130494,
+          "genomic_1b": 117610519,
+          "junction_cut_gene0": {
+            "left_gene0": 130493,
+            "right_gene0": 130494
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9998621940612793,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon19_donor",
+          "site_type": "donor",
+          "exon_number": 19,
+          "pos_gene0": 130644,
+          "genomic_1b": 117610669,
+          "junction_cut_gene0": {
+            "left_gene0": 130644,
+            "right_gene0": 130645
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9987167119979858,
+          "rank": 9,
+          "percentile": 99.99575911789653
+        },
+        {
+          "kind": "exon20_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 20,
+          "pos_gene0": 131556,
+          "genomic_1b": 117611581,
+          "junction_cut_gene0": {
+            "left_gene0": 131555,
+            "right_gene0": 131556
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9969854950904846,
+          "rank": 19,
+          "percentile": 99.99045801526718
+        },
+        {
+          "kind": "exon20_donor",
+          "site_type": "donor",
+          "exon_number": 20,
+          "pos_gene0": 131783,
+          "genomic_1b": 117611808,
+          "junction_cut_gene0": {
+            "left_gene0": 131783,
+            "right_gene0": 131784
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9957210421562195,
+          "rank": 18,
+          "percentile": 99.99098812553011
+        },
+        {
+          "kind": "exon21_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 21,
+          "pos_gene0": 134588,
+          "genomic_1b": 117614613,
+          "junction_cut_gene0": {
+            "left_gene0": 134587,
+            "right_gene0": 134588
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9983892440795898,
+          "rank": 14,
+          "percentile": 99.99310856658184
+        },
+        {
+          "kind": "exon21_donor",
+          "site_type": "donor",
+          "exon_number": 21,
+          "pos_gene0": 134688,
+          "genomic_1b": 117614713,
+          "junction_cut_gene0": {
+            "left_gene0": 134688,
+            "right_gene0": 134689
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.998544454574585,
+          "rank": 10,
+          "percentile": 99.9952290076336
+        },
+        {
+          "kind": "exon22_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 22,
+          "pos_gene0": 147497,
+          "genomic_1b": 117627522,
+          "junction_cut_gene0": {
+            "left_gene0": 147496,
+            "right_gene0": 147497
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9981222748756409,
+          "rank": 15,
+          "percentile": 99.99257845631891
+        },
+        {
+          "kind": "exon22_donor",
+          "site_type": "donor",
+          "exon_number": 22,
+          "pos_gene0": 147745,
+          "genomic_1b": 117627770,
+          "junction_cut_gene0": {
+            "left_gene0": 147745,
+            "right_gene0": 147746
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9829121828079224,
+          "rank": 25,
+          "percentile": 99.98727735368956
+        },
+        {
+          "kind": "exon23_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 23,
+          "pos_gene0": 162413,
+          "genomic_1b": 117642438,
+          "junction_cut_gene0": {
+            "left_gene0": 162412,
+            "right_gene0": 162413
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9985287189483643,
+          "rank": 13,
+          "percentile": 99.99363867684478
+        },
+        {
+          "kind": "exon23_donor",
+          "site_type": "donor",
+          "exon_number": 23,
+          "pos_gene0": 162568,
+          "genomic_1b": 117642593,
+          "junction_cut_gene0": {
+            "left_gene0": 162568,
+            "right_gene0": 162569
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9937440752983093,
+          "rank": 20,
+          "percentile": 99.98992790500424
+        },
+        {
+          "kind": "exon24_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 24,
+          "pos_gene0": 172817,
+          "genomic_1b": 117652842,
+          "junction_cut_gene0": {
+            "left_gene0": 172816,
+            "right_gene0": 172817
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9993276596069336,
+          "rank": 8,
+          "percentile": 99.99628922815945
+        },
+        {
+          "kind": "exon24_donor",
+          "site_type": "donor",
+          "exon_number": 24,
+          "pos_gene0": 172906,
+          "genomic_1b": 117652931,
+          "junction_cut_gene0": {
+            "left_gene0": 172906,
+            "right_gene0": 172907
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9984489679336548,
+          "rank": 11,
+          "percentile": 99.99469889737065
+        },
+        {
+          "kind": "exon25_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 25,
+          "pos_gene0": 184663,
+          "genomic_1b": 117664688,
+          "junction_cut_gene0": {
+            "left_gene0": 184662,
+            "right_gene0": 184663
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9995157718658447,
+          "rank": 5,
+          "percentile": 99.99787955894827
+        },
+        {
+          "kind": "exon25_donor",
+          "site_type": "donor",
+          "exon_number": 25,
+          "pos_gene0": 184835,
+          "genomic_1b": 117664860,
+          "junction_cut_gene0": {
+            "left_gene0": 184835,
+            "right_gene0": 184836
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9972546696662903,
+          "rank": 17,
+          "percentile": 99.99151823579304
+        },
+        {
+          "kind": "exon26_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 26,
+          "pos_gene0": 185434,
+          "genomic_1b": 117665459,
+          "junction_cut_gene0": {
+            "left_gene0": 185433,
+            "right_gene0": 185434
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9989373087882996,
+          "rank": 11,
+          "percentile": 99.99469889737065
+        },
+        {
+          "kind": "exon26_donor",
+          "site_type": "donor",
+          "exon_number": 26,
+          "pos_gene0": 185539,
+          "genomic_1b": 117665564,
+          "junction_cut_gene0": {
+            "left_gene0": 185539,
+            "right_gene0": 185540
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9993394017219543,
+          "rank": 7,
+          "percentile": 99.9968193384224
+        },
+        {
+          "kind": "exon27_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 27,
+          "pos_gene0": 186883,
+          "genomic_1b": 117666908,
+          "junction_cut_gene0": {
+            "left_gene0": 186882,
+            "right_gene0": 186883
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.999367892742157,
+          "rank": 7,
+          "percentile": 99.9968193384224
+        }
+      ],
+      "summary": {
+        "acceptor": {
+          "n": 26,
+          "prob_min": 0.9846046566963196,
+          "prob_median": 0.998458981513977,
+          "prob_max": 0.9998621940612793,
+          "rank_best": 1,
+          "rank_median": 13,
+          "motif_ok_rate": 1.0
+        },
+        "donor": {
+          "n": 26,
+          "prob_min": 0.9607558250427246,
+          "prob_median": 0.9980799853801727,
+          "prob_max": 0.9999008178710938,
+          "rank_best": 1,
+          "rank_median": 13,
+          "motif_ok_rate": 1.0
+        }
+      },
+      "orf_sanity_exon_only": {
+        "ok": true,
+        "start_idx0": 70,
+        "stop_idx0": 4510,
+        "stop_codon": "TAG",
+        "orf_len_nt": 4443,
+        "orf_len_aa": 1481,
+        "mRNA_len": 6070
+      }
+    },
+    {
+      "disease_id": "DNM1_gene0_22648_G>A",
+      "disease_name": "DNM1-related developmental and epileptic encephalopathy",
+      "gene_id": "DNM1",
+      "strand_db": "+",
+      "strand_annotation": "+",
+      "chrom": "chr9",
+      "tx_start_1b": 128203379,
+      "tx_end_1b": 128255244,
+      "gene_length": 51866,
+      "exon_count": 22,
+      "snv": {
+        "pos_gene0": 22648,
+        "ref": "G",
+        "alt": "A"
+      },
+      "sequence_check": {
+        "ok": true,
+        "len": 51866,
+        "covered_bases": 51866,
+        "covered_rate": 1.0,
+        "mismatch_count": 0,
+        "mismatch_samples": []
+      },
+      "exon_boundary_check": {
+        "ok": true,
+        "exon_count_db": 22,
+        "exon_count_annotation": 22,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "note": "Annotation exons are ordered in transcript order (+ asc, - desc)."
+      },
+      "model": {
+        "checkpoint": "/Users/martin/Git/splice-playground/backend/app/ai_models/spliceai_window=10000.pt",
+        "flank_total": 10000,
+        "pad_each": 5000,
+        "input_len": 61866,
+        "output_len": 51866
+      },
+      "canonical_sites": [
+        {
+          "kind": "exon1_donor",
+          "site_type": "donor",
+          "exon_number": 1,
+          "pos_gene0": 252,
+          "genomic_1b": 128203631,
+          "junction_cut_gene0": {
+            "left_gene0": 252,
+            "right_gene0": 253
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9987301230430603,
+          "rank": 15,
+          "percentile": 99.97300684469296
+        },
+        {
+          "kind": "exon2_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 2,
+          "pos_gene0": 14852,
+          "genomic_1b": 128218231,
+          "junction_cut_gene0": {
+            "left_gene0": 14851,
+            "right_gene0": 14852
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9962325692176819,
+          "rank": 14,
+          "percentile": 99.97493492721489
+        },
+        {
+          "kind": "exon2_donor",
+          "site_type": "donor",
+          "exon_number": 2,
+          "pos_gene0": 14925,
+          "genomic_1b": 128218304,
+          "junction_cut_gene0": {
+            "left_gene0": 14925,
+            "right_gene0": 14926
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9987829327583313,
+          "rank": 14,
+          "percentile": 99.97493492721489
+        },
+        {
+          "kind": "exon3_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 3,
+          "pos_gene0": 15203,
+          "genomic_1b": 128218582,
+          "junction_cut_gene0": {
+            "left_gene0": 15202,
+            "right_gene0": 15203
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9992495179176331,
+          "rank": 11,
+          "percentile": 99.98071917478069
+        },
+        {
+          "kind": "exon3_donor",
+          "site_type": "donor",
+          "exon_number": 3,
+          "pos_gene0": 15352,
+          "genomic_1b": 128218731,
+          "junction_cut_gene0": {
+            "left_gene0": 15352,
+            "right_gene0": 15353
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996564388275146,
+          "rank": 8,
+          "percentile": 99.98650342234647
+        },
+        {
+          "kind": "exon4_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 4,
+          "pos_gene0": 15670,
+          "genomic_1b": 128219049,
+          "junction_cut_gene0": {
+            "left_gene0": 15669,
+            "right_gene0": 15670
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9998946189880371,
+          "rank": 3,
+          "percentile": 99.99614383495614
+        },
+        {
+          "kind": "exon4_donor",
+          "site_type": "donor",
+          "exon_number": 4,
+          "pos_gene0": 15873,
+          "genomic_1b": 128219252,
+          "junction_cut_gene0": {
+            "left_gene0": 15873,
+            "right_gene0": 15874
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998325109481812,
+          "rank": 5,
+          "percentile": 99.99228766991227
+        },
+        {
+          "kind": "exon5_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 5,
+          "pos_gene0": 16609,
+          "genomic_1b": 128219988,
+          "junction_cut_gene0": {
+            "left_gene0": 16608,
+            "right_gene0": 16609
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9980740547180176,
+          "rank": 13,
+          "percentile": 99.97686300973682
+        },
+        {
+          "kind": "exon5_donor",
+          "site_type": "donor",
+          "exon_number": 5,
+          "pos_gene0": 16707,
+          "genomic_1b": 128220086,
+          "junction_cut_gene0": {
+            "left_gene0": 16707,
+            "right_gene0": 16708
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999589920043945,
+          "rank": 2,
+          "percentile": 99.99807191747807
+        },
+        {
+          "kind": "exon6_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 6,
+          "pos_gene0": 16802,
+          "genomic_1b": 128220181,
+          "junction_cut_gene0": {
+            "left_gene0": 16801,
+            "right_gene0": 16802
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9999039173126221,
+          "rank": 2,
+          "percentile": 99.99807191747807
+        },
+        {
+          "kind": "exon6_donor",
+          "site_type": "donor",
+          "exon_number": 6,
+          "pos_gene0": 16962,
+          "genomic_1b": 128220341,
+          "junction_cut_gene0": {
+            "left_gene0": 16962,
+            "right_gene0": 16963
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999065399169922,
+          "rank": 3,
+          "percentile": 99.99614383495614
+        },
+        {
+          "kind": "exon7_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 7,
+          "pos_gene0": 18818,
+          "genomic_1b": 128222197,
+          "junction_cut_gene0": {
+            "left_gene0": 18817,
+            "right_gene0": 18818
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.999283492565155,
+          "rank": 10,
+          "percentile": 99.98264725730262
+        },
+        {
+          "kind": "exon7_donor",
+          "site_type": "donor",
+          "exon_number": 7,
+          "pos_gene0": 18960,
+          "genomic_1b": 128222339,
+          "junction_cut_gene0": {
+            "left_gene0": 18960,
+            "right_gene0": 18961
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997686743736267,
+          "rank": 6,
+          "percentile": 99.99035958739034
+        },
+        {
+          "kind": "exon8_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 8,
+          "pos_gene0": 19082,
+          "genomic_1b": 128222461,
+          "junction_cut_gene0": {
+            "left_gene0": 19081,
+            "right_gene0": 19082
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9994246959686279,
+          "rank": 8,
+          "percentile": 99.98650342234647
+        },
+        {
+          "kind": "exon8_donor",
+          "site_type": "donor",
+          "exon_number": 8,
+          "pos_gene0": 19217,
+          "genomic_1b": 128222596,
+          "junction_cut_gene0": {
+            "left_gene0": 19217,
+            "right_gene0": 19218
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999055862426758,
+          "rank": 4,
+          "percentile": 99.9942157524342
+        },
+        {
+          "kind": "exon9_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 9,
+          "pos_gene0": 19414,
+          "genomic_1b": 128222793,
+          "junction_cut_gene0": {
+            "left_gene0": 19413,
+            "right_gene0": 19414
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9999101161956787,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon9_donor",
+          "site_type": "donor",
+          "exon_number": 9,
+          "pos_gene0": 19481,
+          "genomic_1b": 128222860,
+          "junction_cut_gene0": {
+            "left_gene0": 19481,
+            "right_gene0": 19482
+          },
+          "motif_db": "GC",
+          "motif_ok_db": true,
+          "prob": 0.999289870262146,
+          "rank": 11,
+          "percentile": 99.98071917478069
+        },
+        {
+          "kind": "exon10_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 10,
+          "pos_gene0": 20872,
+          "genomic_1b": 128224251,
+          "junction_cut_gene0": {
+            "left_gene0": 20871,
+            "right_gene0": 20872
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9581172466278076,
+          "rank": 19,
+          "percentile": 99.96529451460523
+        },
+        {
+          "kind": "exon10_donor",
+          "site_type": "donor",
+          "exon_number": 10,
+          "pos_gene0": 21010,
+          "genomic_1b": 128224389,
+          "junction_cut_gene0": {
+            "left_gene0": 21010,
+            "right_gene0": 21011
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996254444122314,
+          "rank": 9,
+          "percentile": 99.98457533982454
+        },
+        {
+          "kind": "exon11_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 11,
+          "pos_gene0": 30642,
+          "genomic_1b": 128234021,
+          "junction_cut_gene0": {
+            "left_gene0": 30641,
+            "right_gene0": 30642
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9925649166107178,
+          "rank": 17,
+          "percentile": 99.96915067964909
+        },
+        {
+          "kind": "exon11_donor",
+          "site_type": "donor",
+          "exon_number": 11,
+          "pos_gene0": 30728,
+          "genomic_1b": 128234107,
+          "junction_cut_gene0": {
+            "left_gene0": 30728,
+            "right_gene0": 30729
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9940401315689087,
+          "rank": 19,
+          "percentile": 99.96529451460523
+        },
+        {
+          "kind": "exon12_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 12,
+          "pos_gene0": 36066,
+          "genomic_1b": 128239445,
+          "junction_cut_gene0": {
+            "left_gene0": 36065,
+            "right_gene0": 36066
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9939813017845154,
+          "rank": 16,
+          "percentile": 99.97107876217102
+        },
+        {
+          "kind": "exon12_donor",
+          "site_type": "donor",
+          "exon_number": 12,
+          "pos_gene0": 36136,
+          "genomic_1b": 128239515,
+          "junction_cut_gene0": {
+            "left_gene0": 36136,
+            "right_gene0": 36137
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9929002523422241,
+          "rank": 20,
+          "percentile": 99.96336643208329
+        },
+        {
+          "kind": "exon13_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 13,
+          "pos_gene0": 36349,
+          "genomic_1b": 128239728,
+          "junction_cut_gene0": {
+            "left_gene0": 36348,
+            "right_gene0": 36349
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996894598007202,
+          "rank": 4,
+          "percentile": 99.9942157524342
+        },
+        {
+          "kind": "exon13_donor",
+          "site_type": "donor",
+          "exon_number": 13,
+          "pos_gene0": 36400,
+          "genomic_1b": 128239779,
+          "junction_cut_gene0": {
+            "left_gene0": 36400,
+            "right_gene0": 36401
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996986389160156,
+          "rank": 7,
+          "percentile": 99.98843150486842
+        },
+        {
+          "kind": "exon14_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 14,
+          "pos_gene0": 36606,
+          "genomic_1b": 128239985,
+          "junction_cut_gene0": {
+            "left_gene0": 36605,
+            "right_gene0": 36606
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9000844359397888,
+          "rank": 20,
+          "percentile": 99.96336643208329
+        },
+        {
+          "kind": "exon14_donor",
+          "site_type": "donor",
+          "exon_number": 14,
+          "pos_gene0": 36617,
+          "genomic_1b": 128239996,
+          "junction_cut_gene0": {
+            "left_gene0": 36617,
+            "right_gene0": 36618
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9771857261657715,
+          "rank": 22,
+          "percentile": 99.95951026703943
+        },
+        {
+          "kind": "exon15_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 15,
+          "pos_gene0": 38853,
+          "genomic_1b": 128242232,
+          "junction_cut_gene0": {
+            "left_gene0": 38852,
+            "right_gene0": 38853
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996123909950256,
+          "rank": 5,
+          "percentile": 99.99228766991227
+        },
+        {
+          "kind": "exon15_donor",
+          "site_type": "donor",
+          "exon_number": 15,
+          "pos_gene0": 38966,
+          "genomic_1b": 128242345,
+          "junction_cut_gene0": {
+            "left_gene0": 38966,
+            "right_gene0": 38967
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9990666508674622,
+          "rank": 13,
+          "percentile": 99.97686300973682
+        },
+        {
+          "kind": "exon16_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 16,
+          "pos_gene0": 43015,
+          "genomic_1b": 128246394,
+          "junction_cut_gene0": {
+            "left_gene0": 43014,
+            "right_gene0": 43015
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9985003471374512,
+          "rank": 12,
+          "percentile": 99.97879109225875
+        },
+        {
+          "kind": "exon16_donor",
+          "site_type": "donor",
+          "exon_number": 16,
+          "pos_gene0": 43124,
+          "genomic_1b": 128246503,
+          "junction_cut_gene0": {
+            "left_gene0": 43124,
+            "right_gene0": 43125
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9990904331207275,
+          "rank": 12,
+          "percentile": 99.97879109225875
+        },
+        {
+          "kind": "exon17_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 17,
+          "pos_gene0": 43996,
+          "genomic_1b": 128247375,
+          "junction_cut_gene0": {
+            "left_gene0": 43995,
+            "right_gene0": 43996
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9951606392860413,
+          "rank": 15,
+          "percentile": 99.97300684469296
+        },
+        {
+          "kind": "exon17_donor",
+          "site_type": "donor",
+          "exon_number": 17,
+          "pos_gene0": 44107,
+          "genomic_1b": 128247486,
+          "junction_cut_gene0": {
+            "left_gene0": 44107,
+            "right_gene0": 44108
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9995224475860596,
+          "rank": 10,
+          "percentile": 99.98264725730262
+        },
+        {
+          "kind": "exon18_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 18,
+          "pos_gene0": 44545,
+          "genomic_1b": 128247924,
+          "junction_cut_gene0": {
+            "left_gene0": 44544,
+            "right_gene0": 44545
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.40118491649627686,
+          "rank": 25,
+          "percentile": 99.95372601947363
+        },
+        {
+          "kind": "exon18_donor",
+          "site_type": "donor",
+          "exon_number": 18,
+          "pos_gene0": 44556,
+          "genomic_1b": 128247935,
+          "junction_cut_gene0": {
+            "left_gene0": 44556,
+            "right_gene0": 44557
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.6419149041175842,
+          "rank": 24,
+          "percentile": 99.95565410199556
+        },
+        {
+          "kind": "exon19_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 19,
+          "pos_gene0": 45204,
+          "genomic_1b": 128248583,
+          "junction_cut_gene0": {
+            "left_gene0": 45203,
+            "right_gene0": 45204
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.999496579170227,
+          "rank": 7,
+          "percentile": 99.98843150486842
+        },
+        {
+          "kind": "exon19_donor",
+          "site_type": "donor",
+          "exon_number": 19,
+          "pos_gene0": 45374,
+          "genomic_1b": 128248753,
+          "junction_cut_gene0": {
+            "left_gene0": 45374,
+            "right_gene0": 45375
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999740123748779,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon20_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 20,
+          "pos_gene0": 46736,
+          "genomic_1b": 128250115,
+          "junction_cut_gene0": {
+            "left_gene0": 46735,
+            "right_gene0": 46736
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9995211362838745,
+          "rank": 6,
+          "percentile": 99.99035958739034
+        },
+        {
+          "kind": "exon20_donor",
+          "site_type": "donor",
+          "exon_number": 20,
+          "pos_gene0": 46977,
+          "genomic_1b": 128250356,
+          "junction_cut_gene0": {
+            "left_gene0": 46977,
+            "right_gene0": 46978
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9960111379623413,
+          "rank": 17,
+          "percentile": 99.96915067964909
+        },
+        {
+          "kind": "exon21_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 21,
+          "pos_gene0": 47346,
+          "genomic_1b": 128250725,
+          "junction_cut_gene0": {
+            "left_gene0": 47345,
+            "right_gene0": 47346
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.5054396986961365,
+          "rank": 23,
+          "percentile": 99.9575821845175
+        },
+        {
+          "kind": "exon21_donor",
+          "site_type": "donor",
+          "exon_number": 21,
+          "pos_gene0": 47561,
+          "genomic_1b": 128250940,
+          "junction_cut_gene0": {
+            "left_gene0": 47561,
+            "right_gene0": 47562
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.986687183380127,
+          "rank": 21,
+          "percentile": 99.96143834956136
+        },
+        {
+          "kind": "exon22_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 22,
+          "pos_gene0": 51275,
+          "genomic_1b": 128254654,
+          "junction_cut_gene0": {
+            "left_gene0": 51274,
+            "right_gene0": 51275
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.020724797621369362,
+          "rank": 31,
+          "percentile": 99.94215752434205
+        }
+      ],
+      "summary": {
+        "acceptor": {
+          "n": 21,
+          "prob_min": 0.020724797621369362,
+          "prob_median": 0.9985003471374512,
+          "prob_max": 0.9999101161956787,
+          "rank_best": 1,
+          "rank_median": 12,
+          "motif_ok_rate": 1.0
+        },
+        "donor": {
+          "n": 21,
+          "prob_min": 0.6419149041175842,
+          "prob_median": 0.999289870262146,
+          "prob_max": 0.9999740123748779,
+          "rank_best": 1,
+          "rank_median": 11,
+          "motif_ok_rate": 1.0
+        }
+      },
+      "orf_sanity_exon_only": {
+        "ok": true,
+        "start_idx0": 92,
+        "stop_idx0": 2684,
+        "stop_codon": "TAA",
+        "orf_len_nt": 2595,
+        "orf_len_aa": 865,
+        "mRNA_len": 3217
+      }
+    },
+    {
+      "disease_id": "MSH2_gene0_4856_T>G",
+      "disease_name": "Lynch syndrome",
+      "gene_id": "MSH2",
+      "strand_db": "+",
+      "strand_annotation": "+",
+      "chrom": "chr2",
+      "tx_start_1b": 47403067,
+      "tx_end_1b": 47709830,
+      "gene_length": 306764,
+      "exon_count": 16,
+      "snv": {
+        "pos_gene0": 4856,
+        "ref": "T",
+        "alt": "G"
+      },
+      "sequence_check": {
+        "ok": true,
+        "len": 306764,
+        "covered_bases": 80068,
+        "covered_rate": 0.26100846253145743,
+        "mismatch_count": 0,
+        "mismatch_samples": []
+      },
+      "exon_boundary_check": {
+        "ok": true,
+        "exon_count_db": 16,
+        "exon_count_annotation": 16,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "note": "Annotation exons are ordered in transcript order (+ asc, - desc)."
+      },
+      "model": {
+        "checkpoint": "/Users/martin/Git/splice-playground/backend/app/ai_models/spliceai_window=10000.pt",
+        "flank_total": 10000,
+        "pad_each": 5000,
+        "input_len": 316764,
+        "output_len": 306764
+      },
+      "canonical_sites": [
+        {
+          "kind": "exon1_donor",
+          "site_type": "donor",
+          "exon_number": 1,
+          "pos_gene0": 335,
+          "genomic_1b": 47403402,
+          "junction_cut_gene0": {
+            "left_gene0": 335,
+            "right_gene0": 336
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9988186955451965,
+          "rank": 14,
+          "percentile": 99.99576220078693
+        },
+        {
+          "kind": "exon2_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 2,
+          "pos_gene0": 5334,
+          "genomic_1b": 47408401,
+          "junction_cut_gene0": {
+            "left_gene0": 5333,
+            "right_gene0": 5334
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9974527955055237,
+          "rank": 10,
+          "percentile": 99.99706613900634
+        },
+        {
+          "kind": "exon2_donor",
+          "site_type": "donor",
+          "exon_number": 2,
+          "pos_gene0": 5488,
+          "genomic_1b": 47408555,
+          "junction_cut_gene0": {
+            "left_gene0": 5488,
+            "right_gene0": 5489
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998730421066284,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon3_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 3,
+          "pos_gene0": 7027,
+          "genomic_1b": 47410094,
+          "junction_cut_gene0": {
+            "left_gene0": 7026,
+            "right_gene0": 7027
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9989268183708191,
+          "rank": 8,
+          "percentile": 99.99771810811605
+        },
+        {
+          "kind": "exon3_donor",
+          "site_type": "donor",
+          "exon_number": 3,
+          "pos_gene0": 7305,
+          "genomic_1b": 47410372,
+          "junction_cut_gene0": {
+            "left_gene0": 7305,
+            "right_gene0": 7306
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994606375694275,
+          "rank": 11,
+          "percentile": 99.99674015445149
+        },
+        {
+          "kind": "exon4_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 4,
+          "pos_gene0": 9347,
+          "genomic_1b": 47412414,
+          "junction_cut_gene0": {
+            "left_gene0": 9346,
+            "right_gene0": 9347
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9999312162399292,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon4_donor",
+          "site_type": "donor",
+          "exon_number": 4,
+          "pos_gene0": 9493,
+          "genomic_1b": 47412560,
+          "junction_cut_gene0": {
+            "left_gene0": 9493,
+            "right_gene0": 9494
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997966885566711,
+          "rank": 3,
+          "percentile": 99.9993480308903
+        },
+        {
+          "kind": "exon5_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 5,
+          "pos_gene0": 11202,
+          "genomic_1b": 47414269,
+          "junction_cut_gene0": {
+            "left_gene0": 11201,
+            "right_gene0": 11202
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9997624754905701,
+          "rank": 4,
+          "percentile": 99.99902204633544
+        },
+        {
+          "kind": "exon5_donor",
+          "site_type": "donor",
+          "exon_number": 5,
+          "pos_gene0": 11351,
+          "genomic_1b": 47414418,
+          "junction_cut_gene0": {
+            "left_gene0": 11351,
+            "right_gene0": 11352
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996978044509888,
+          "rank": 5,
+          "percentile": 99.99869606178059
+        },
+        {
+          "kind": "exon6_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 6,
+          "pos_gene0": 13229,
+          "genomic_1b": 47416296,
+          "junction_cut_gene0": {
+            "left_gene0": 13228,
+            "right_gene0": 13229
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9998981952667236,
+          "rank": 3,
+          "percentile": 99.9993480308903
+        },
+        {
+          "kind": "exon6_donor",
+          "site_type": "donor",
+          "exon_number": 6,
+          "pos_gene0": 13362,
+          "genomic_1b": 47416429,
+          "junction_cut_gene0": {
+            "left_gene0": 13362,
+            "right_gene0": 13363
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996210336685181,
+          "rank": 8,
+          "percentile": 99.99771810811605
+        },
+        {
+          "kind": "exon7_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 7,
+          "pos_gene0": 26675,
+          "genomic_1b": 47429742,
+          "junction_cut_gene0": {
+            "left_gene0": 26674,
+            "right_gene0": 26675
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996916055679321,
+          "rank": 5,
+          "percentile": 99.99869606178059
+        },
+        {
+          "kind": "exon7_donor",
+          "site_type": "donor",
+          "exon_number": 7,
+          "pos_gene0": 26874,
+          "genomic_1b": 47429941,
+          "junction_cut_gene0": {
+            "left_gene0": 26874,
+            "right_gene0": 26875
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9990624785423279,
+          "rank": 13,
+          "percentile": 99.99608818534178
+        },
+        {
+          "kind": "exon8_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 8,
+          "pos_gene0": 42481,
+          "genomic_1b": 47445548,
+          "junction_cut_gene0": {
+            "left_gene0": 42480,
+            "right_gene0": 42481
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9972257018089294,
+          "rank": 11,
+          "percentile": 99.99674015445149
+        },
+        {
+          "kind": "exon8_donor",
+          "site_type": "donor",
+          "exon_number": 8,
+          "pos_gene0": 42590,
+          "genomic_1b": 47445657,
+          "junction_cut_gene0": {
+            "left_gene0": 42590,
+            "right_gene0": 42591
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.999639630317688,
+          "rank": 7,
+          "percentile": 99.9980440926709
+        },
+        {
+          "kind": "exon9_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 9,
+          "pos_gene0": 59964,
+          "genomic_1b": 47463031,
+          "junction_cut_gene0": {
+            "left_gene0": 59963,
+            "right_gene0": 59964
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9999059438705444,
+          "rank": 2,
+          "percentile": 99.99967401544515
+        },
+        {
+          "kind": "exon9_donor",
+          "site_type": "donor",
+          "exon_number": 9,
+          "pos_gene0": 60087,
+          "genomic_1b": 47463154,
+          "junction_cut_gene0": {
+            "left_gene0": 60087,
+            "right_gene0": 60088
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.997495710849762,
+          "rank": 15,
+          "percentile": 99.99543621623206
+        },
+        {
+          "kind": "exon10_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 10,
+          "pos_gene0": 63591,
+          "genomic_1b": 47466658,
+          "junction_cut_gene0": {
+            "left_gene0": 63590,
+            "right_gene0": 63591
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9960986375808716,
+          "rank": 13,
+          "percentile": 99.99608818534178
+        },
+        {
+          "kind": "exon10_donor",
+          "site_type": "donor",
+          "exon_number": 10,
+          "pos_gene0": 63741,
+          "genomic_1b": 47466808,
+          "junction_cut_gene0": {
+            "left_gene0": 63741,
+            "right_gene0": 63742
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.999203622341156,
+          "rank": 12,
+          "percentile": 99.99641416989662
+        },
+        {
+          "kind": "exon11_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 11,
+          "pos_gene0": 67898,
+          "genomic_1b": 47470965,
+          "junction_cut_gene0": {
+            "left_gene0": 67897,
+            "right_gene0": 67898
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.999687671661377,
+          "rank": 6,
+          "percentile": 99.99837007722574
+        },
+        {
+          "kind": "exon11_donor",
+          "site_type": "donor",
+          "exon_number": 11,
+          "pos_gene0": 67995,
+          "genomic_1b": 47471062,
+          "junction_cut_gene0": {
+            "left_gene0": 67995,
+            "right_gene0": 67996
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996733665466309,
+          "rank": 6,
+          "percentile": 99.99837007722574
+        },
+        {
+          "kind": "exon12_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 12,
+          "pos_gene0": 71958,
+          "genomic_1b": 47475025,
+          "junction_cut_gene0": {
+            "left_gene0": 71957,
+            "right_gene0": 71958
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.999405026435852,
+          "rank": 7,
+          "percentile": 99.9980440926709
+        },
+        {
+          "kind": "exon12_donor",
+          "site_type": "donor",
+          "exon_number": 12,
+          "pos_gene0": 72203,
+          "genomic_1b": 47475270,
+          "junction_cut_gene0": {
+            "left_gene0": 72203,
+            "right_gene0": 72204
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997724890708923,
+          "rank": 4,
+          "percentile": 99.99902204633544
+        },
+        {
+          "kind": "exon13_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 13,
+          "pos_gene0": 73300,
+          "genomic_1b": 47476367,
+          "junction_cut_gene0": {
+            "left_gene0": 73299,
+            "right_gene0": 73300
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9984064698219299,
+          "rank": 9,
+          "percentile": 99.99739212356118
+        },
+        {
+          "kind": "exon13_donor",
+          "site_type": "donor",
+          "exon_number": 13,
+          "pos_gene0": 73504,
+          "genomic_1b": 47476571,
+          "junction_cut_gene0": {
+            "left_gene0": 73504,
+            "right_gene0": 73505
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.999527096748352,
+          "rank": 10,
+          "percentile": 99.99706613900634
+        },
+        {
+          "kind": "exon14_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 14,
+          "pos_gene0": 75205,
+          "genomic_1b": 47478272,
+          "junction_cut_gene0": {
+            "left_gene0": 75204,
+            "right_gene0": 75205
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9952704310417175,
+          "rank": 14,
+          "percentile": 99.99576220078693
+        },
+        {
+          "kind": "exon14_donor",
+          "site_type": "donor",
+          "exon_number": 14,
+          "pos_gene0": 75452,
+          "genomic_1b": 47478519,
+          "junction_cut_gene0": {
+            "left_gene0": 75452,
+            "right_gene0": 75453
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9995749592781067,
+          "rank": 9,
+          "percentile": 99.99739212356118
+        },
+        {
+          "kind": "exon15_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 15,
+          "pos_gene0": 77629,
+          "genomic_1b": 47480696,
+          "junction_cut_gene0": {
+            "left_gene0": 77628,
+            "right_gene0": 77629
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9970356225967407,
+          "rank": 12,
+          "percentile": 99.99641416989662
+        },
+        {
+          "kind": "exon15_donor",
+          "site_type": "donor",
+          "exon_number": 15,
+          "pos_gene0": 77804,
+          "genomic_1b": 47480871,
+          "junction_cut_gene0": {
+            "left_gene0": 77804,
+            "right_gene0": 77805
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998667240142822,
+          "rank": 2,
+          "percentile": 99.99967401544515
+        },
+        {
+          "kind": "exon16_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 16,
+          "pos_gene0": 79712,
+          "genomic_1b": 47482779,
+          "junction_cut_gene0": {
+            "left_gene0": 79711,
+            "right_gene0": 79712
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9692661762237549,
+          "rank": 15,
+          "percentile": 99.99543621623206
+        }
+      ],
+      "summary": {
+        "acceptor": {
+          "n": 15,
+          "prob_min": 0.9692661762237549,
+          "prob_median": 0.9989268183708191,
+          "prob_max": 0.9999312162399292,
+          "rank_best": 1,
+          "rank_median": 8,
+          "motif_ok_rate": 1.0
+        },
+        "donor": {
+          "n": 15,
+          "prob_min": 0.997495710849762,
+          "prob_median": 0.9996210336685181,
+          "prob_max": 0.9998730421066284,
+          "rank_best": 1,
+          "rank_median": 8,
+          "motif_ok_rate": 1.0
+        }
+      },
+      "orf_sanity_exon_only": {
+        "ok": true,
+        "start_idx0": 36,
+        "stop_idx0": 2838,
+        "stop_codon": "TGA",
+        "orf_len_nt": 2805,
+        "orf_len_aa": 935,
+        "mRNA_len": 3115
+      }
+    },
+    {
+      "disease_id": "PMM2_gene0_34406_C>T",
+      "disease_name": "PMM2-CDG",
+      "gene_id": "PMM2",
+      "strand_db": "+",
+      "strand_annotation": "+",
+      "chrom": "chr16",
+      "tx_start_1b": 8797839,
+      "tx_end_1b": 8849325,
+      "gene_length": 51487,
+      "exon_count": 8,
+      "snv": {
+        "pos_gene0": 34406,
+        "ref": "C",
+        "alt": "T"
+      },
+      "sequence_check": {
+        "ok": true,
+        "len": 51487,
+        "covered_bases": 51487,
+        "covered_rate": 1.0,
+        "mismatch_count": 0,
+        "mismatch_samples": []
+      },
+      "exon_boundary_check": {
+        "ok": true,
+        "exon_count_db": 8,
+        "exon_count_annotation": 8,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "note": "Annotation exons are ordered in transcript order (+ asc, - desc)."
+      },
+      "model": {
+        "checkpoint": "/Users/martin/Git/splice-playground/backend/app/ai_models/spliceai_window=10000.pt",
+        "flank_total": 10000,
+        "pad_each": 5000,
+        "input_len": 61487,
+        "output_len": 51487
+      },
+      "canonical_sites": [
+        {
+          "kind": "exon1_donor",
+          "site_type": "donor",
+          "exon_number": 1,
+          "pos_gene0": 109,
+          "genomic_1b": 8797948,
+          "junction_cut_gene0": {
+            "left_gene0": 109,
+            "right_gene0": 110
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9934780597686768,
+          "rank": 6,
+          "percentile": 99.99028862214972
+        },
+        {
+          "kind": "exon2_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 2,
+          "pos_gene0": 3960,
+          "genomic_1b": 8801799,
+          "junction_cut_gene0": {
+            "left_gene0": 3959,
+            "right_gene0": 3960
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996154308319092,
+          "rank": 2,
+          "percentile": 99.99805772442994
+        },
+        {
+          "kind": "exon2_donor",
+          "site_type": "donor",
+          "exon_number": 2,
+          "pos_gene0": 4071,
+          "genomic_1b": 8801910,
+          "junction_cut_gene0": {
+            "left_gene0": 4071,
+            "right_gene0": 4072
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9991140961647034,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon3_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 3,
+          "pos_gene0": 6928,
+          "genomic_1b": 8804767,
+          "junction_cut_gene0": {
+            "left_gene0": 6927,
+            "right_gene0": 6928
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9981409311294556,
+          "rank": 4,
+          "percentile": 99.99417317328982
+        },
+        {
+          "kind": "exon3_donor",
+          "site_type": "donor",
+          "exon_number": 3,
+          "pos_gene0": 7004,
+          "genomic_1b": 8804843,
+          "junction_cut_gene0": {
+            "left_gene0": 7004,
+            "right_gene0": 7005
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9980801343917847,
+          "rank": 3,
+          "percentile": 99.99611544885988
+        },
+        {
+          "kind": "exon4_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 4,
+          "pos_gene0": 8477,
+          "genomic_1b": 8806316,
+          "junction_cut_gene0": {
+            "left_gene0": 8476,
+            "right_gene0": 8477
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9302417039871216,
+          "rank": 6,
+          "percentile": 99.99028862214972
+        },
+        {
+          "kind": "exon4_donor",
+          "site_type": "donor",
+          "exon_number": 4,
+          "pos_gene0": 8568,
+          "genomic_1b": 8806407,
+          "junction_cut_gene0": {
+            "left_gene0": 8568,
+            "right_gene0": 8569
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9094600081443787,
+          "rank": 7,
+          "percentile": 99.98834634657965
+        },
+        {
+          "kind": "exon5_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 5,
+          "pos_gene0": 13240,
+          "genomic_1b": 8811079,
+          "junction_cut_gene0": {
+            "left_gene0": 13239,
+            "right_gene0": 13240
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9992877840995789,
+          "rank": 3,
+          "percentile": 99.99611544885988
+        },
+        {
+          "kind": "exon5_donor",
+          "site_type": "donor",
+          "exon_number": 5,
+          "pos_gene0": 13339,
+          "genomic_1b": 8811178,
+          "junction_cut_gene0": {
+            "left_gene0": 13339,
+            "right_gene0": 13340
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9946993589401245,
+          "rank": 4,
+          "percentile": 99.99417317328982
+        },
+        {
+          "kind": "exon6_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 6,
+          "pos_gene0": 13799,
+          "genomic_1b": 8811638,
+          "junction_cut_gene0": {
+            "left_gene0": 13798,
+            "right_gene0": 13799
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9981027245521545,
+          "rank": 5,
+          "percentile": 99.99223089771976
+        },
+        {
+          "kind": "exon6_donor",
+          "site_type": "donor",
+          "exon_number": 6,
+          "pos_gene0": 13874,
+          "genomic_1b": 8811713,
+          "junction_cut_gene0": {
+            "left_gene0": 13874,
+            "right_gene0": 13875
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9940628409385681,
+          "rank": 5,
+          "percentile": 99.99223089771976
+        },
+        {
+          "kind": "exon7_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 7,
+          "pos_gene0": 15152,
+          "genomic_1b": 8812991,
+          "junction_cut_gene0": {
+            "left_gene0": 15151,
+            "right_gene0": 15152
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.999622106552124,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon7_donor",
+          "site_type": "donor",
+          "exon_number": 7,
+          "pos_gene0": 15267,
+          "genomic_1b": 8813106,
+          "junction_cut_gene0": {
+            "left_gene0": 15267,
+            "right_gene0": 15268
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9989056587219238,
+          "rank": 2,
+          "percentile": 99.99805772442994
+        },
+        {
+          "kind": "exon8_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 8,
+          "pos_gene0": 49885,
+          "genomic_1b": 8847724,
+          "junction_cut_gene0": {
+            "left_gene0": 49884,
+            "right_gene0": 49885
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.8970133662223816,
+          "rank": 7,
+          "percentile": 99.98834634657965
+        }
+      ],
+      "summary": {
+        "acceptor": {
+          "n": 7,
+          "prob_min": 0.8970133662223816,
+          "prob_median": 0.9981409311294556,
+          "prob_max": 0.999622106552124,
+          "rank_best": 1,
+          "rank_median": 4,
+          "motif_ok_rate": 1.0
+        },
+        "donor": {
+          "n": 7,
+          "prob_min": 0.9094600081443787,
+          "prob_median": 0.9946993589401245,
+          "prob_max": 0.9991140961647034,
+          "rank_best": 1,
+          "rank_median": 4,
+          "motif_ok_rate": 1.0
+        }
+      },
+      "orf_sanity_exon_only": {
+        "ok": true,
+        "start_idx0": 44,
+        "stop_idx0": 782,
+        "stop_codon": "TAA",
+        "orf_len_nt": 741,
+        "orf_len_aa": 247,
+        "mRNA_len": 2285
+      }
+    },
+    {
+      "disease_id": "SMN1_gene0_27005_C>T",
+      "disease_name": "Spinal muscular atrophy (SMA)",
+      "gene_id": "SMN1",
+      "strand_db": "+",
+      "strand_annotation": "+",
+      "chrom": "chr5",
+      "tx_start_1b": 70924941,
+      "tx_end_1b": 70966375,
+      "gene_length": 41435,
+      "exon_count": 9,
+      "snv": {
+        "pos_gene0": 27005,
+        "ref": "C",
+        "alt": "T"
+      },
+      "sequence_check": {
+        "ok": true,
+        "len": 41435,
+        "covered_bases": 27929,
+        "covered_rate": 0.674043682876795,
+        "mismatch_count": 0,
+        "mismatch_samples": []
+      },
+      "exon_boundary_check": {
+        "ok": true,
+        "exon_count_db": 9,
+        "exon_count_annotation": 9,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "note": "Annotation exons are ordered in transcript order (+ asc, - desc)."
+      },
+      "model": {
+        "checkpoint": "/Users/martin/Git/splice-playground/backend/app/ai_models/spliceai_window=10000.pt",
+        "flank_total": 10000,
+        "pad_each": 5000,
+        "input_len": 51435,
+        "output_len": 41435
+      },
+      "canonical_sites": [
+        {
+          "kind": "exon1_donor",
+          "site_type": "donor",
+          "exon_number": 1,
+          "pos_gene0": 243,
+          "genomic_1b": 70925184,
+          "junction_cut_gene0": {
+            "left_gene0": 243,
+            "right_gene0": 244
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9968915581703186,
+          "rank": 6,
+          "percentile": 99.98793261572622
+        },
+        {
+          "kind": "exon2_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 2,
+          "pos_gene0": 13898,
+          "genomic_1b": 70938839,
+          "junction_cut_gene0": {
+            "left_gene0": 13897,
+            "right_gene0": 13898
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9987059831619263,
+          "rank": 5,
+          "percentile": 99.99034609258098
+        },
+        {
+          "kind": "exon2_donor",
+          "site_type": "donor",
+          "exon_number": 2,
+          "pos_gene0": 13969,
+          "genomic_1b": 70938910,
+          "junction_cut_gene0": {
+            "left_gene0": 13969,
+            "right_gene0": 13970
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999641180038452,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon3_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 3,
+          "pos_gene0": 16448,
+          "genomic_1b": 70941389,
+          "junction_cut_gene0": {
+            "left_gene0": 16447,
+            "right_gene0": 16448
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9989155530929565,
+          "rank": 4,
+          "percentile": 99.99275956943573
+        },
+        {
+          "kind": "exon3_donor",
+          "site_type": "donor",
+          "exon_number": 3,
+          "pos_gene0": 16567,
+          "genomic_1b": 70941508,
+          "junction_cut_gene0": {
+            "left_gene0": 16567,
+            "right_gene0": 16568
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994118213653564,
+          "rank": 4,
+          "percentile": 99.99275956943573
+        },
+        {
+          "kind": "exon4_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 4,
+          "pos_gene0": 17417,
+          "genomic_1b": 70942358,
+          "junction_cut_gene0": {
+            "left_gene0": 17416,
+            "right_gene0": 17417
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9994046688079834,
+          "rank": 2,
+          "percentile": 99.99758652314524
+        },
+        {
+          "kind": "exon4_donor",
+          "site_type": "donor",
+          "exon_number": 4,
+          "pos_gene0": 17617,
+          "genomic_1b": 70942558,
+          "junction_cut_gene0": {
+            "left_gene0": 17617,
+            "right_gene0": 17618
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996743202209473,
+          "rank": 2,
+          "percentile": 99.99758652314524
+        },
+        {
+          "kind": "exon5_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 5,
+          "pos_gene0": 17777,
+          "genomic_1b": 70942718,
+          "junction_cut_gene0": {
+            "left_gene0": 17776,
+            "right_gene0": 17777
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9994568228721619,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon5_donor",
+          "site_type": "donor",
+          "exon_number": 5,
+          "pos_gene0": 17929,
+          "genomic_1b": 70942870,
+          "junction_cut_gene0": {
+            "left_gene0": 17929,
+            "right_gene0": 17930
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9969879984855652,
+          "rank": 5,
+          "percentile": 99.99034609258098
+        },
+        {
+          "kind": "exon6_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 6,
+          "pos_gene0": 19717,
+          "genomic_1b": 70944658,
+          "junction_cut_gene0": {
+            "left_gene0": 19716,
+            "right_gene0": 19717
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.998608410358429,
+          "rank": 6,
+          "percentile": 99.98793261572622
+        },
+        {
+          "kind": "exon6_donor",
+          "site_type": "donor",
+          "exon_number": 6,
+          "pos_gene0": 19812,
+          "genomic_1b": 70944753,
+          "junction_cut_gene0": {
+            "left_gene0": 19812,
+            "right_gene0": 19813
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9931681156158447,
+          "rank": 7,
+          "percentile": 99.98551913887145
+        },
+        {
+          "kind": "exon7_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 7,
+          "pos_gene0": 21125,
+          "genomic_1b": 70946066,
+          "junction_cut_gene0": {
+            "left_gene0": 21124,
+            "right_gene0": 21125
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9992619156837463,
+          "rank": 3,
+          "percentile": 99.99517304629049
+        },
+        {
+          "kind": "exon7_donor",
+          "site_type": "donor",
+          "exon_number": 7,
+          "pos_gene0": 21235,
+          "genomic_1b": 70946176,
+          "junction_cut_gene0": {
+            "left_gene0": 21235,
+            "right_gene0": 21236
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994156360626221,
+          "rank": 3,
+          "percentile": 99.99517304629049
+        },
+        {
+          "kind": "exon8_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 8,
+          "pos_gene0": 27000,
+          "genomic_1b": 70951941,
+          "junction_cut_gene0": {
+            "left_gene0": 26999,
+            "right_gene0": 27000
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9984632730484009,
+          "rank": 7,
+          "percentile": 99.98551913887145
+        },
+        {
+          "kind": "exon8_donor",
+          "site_type": "donor",
+          "exon_number": 8,
+          "pos_gene0": 27053,
+          "genomic_1b": 70951994,
+          "junction_cut_gene0": {
+            "left_gene0": 27053,
+            "right_gene0": 27054
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.8829105496406555,
+          "rank": 8,
+          "percentile": 99.9831056620167
+        },
+        {
+          "kind": "exon9_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 9,
+          "pos_gene0": 27498,
+          "genomic_1b": 70952439,
+          "junction_cut_gene0": {
+            "left_gene0": 27497,
+            "right_gene0": 27498
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.7557956576347351,
+          "rank": 8,
+          "percentile": 99.9831056620167
+        }
+      ],
+      "summary": {
+        "acceptor": {
+          "n": 8,
+          "prob_min": 0.7557956576347351,
+          "prob_median": 0.9988107681274414,
+          "prob_max": 0.9994568228721619,
+          "rank_best": 1,
+          "rank_median": 4,
+          "motif_ok_rate": 1.0
+        },
+        "donor": {
+          "n": 8,
+          "prob_min": 0.8829105496406555,
+          "prob_median": 0.9981999099254608,
+          "prob_max": 0.9999641180038452,
+          "rank_best": 1,
+          "rank_median": 4,
+          "motif_ok_rate": 1.0
+        }
+      },
+      "orf_sanity_exon_only": {
+        "ok": true,
+        "start_idx0": 17,
+        "stop_idx0": 899,
+        "stop_codon": "TAA",
+        "orf_len_nt": 885,
+        "orf_len_aa": 295,
+        "mRNA_len": 1482
+      }
+    },
+    {
+      "disease_id": "TSC2_gene0_9474_C>T",
+      "disease_name": "Tuberous sclerosis complex",
+      "gene_id": "TSC2",
+      "strand_db": "+",
+      "strand_annotation": "+",
+      "chrom": "chr16",
+      "tx_start_1b": 2047985,
+      "tx_end_1b": 2089491,
+      "gene_length": 41507,
+      "exon_count": 42,
+      "snv": {
+        "pos_gene0": 9474,
+        "ref": "C",
+        "alt": "T"
+      },
+      "sequence_check": {
+        "ok": true,
+        "len": 41507,
+        "covered_bases": 41507,
+        "covered_rate": 1.0,
+        "mismatch_count": 0,
+        "mismatch_samples": []
+      },
+      "exon_boundary_check": {
+        "ok": true,
+        "exon_count_db": 42,
+        "exon_count_annotation": 42,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "note": "Annotation exons are ordered in transcript order (+ asc, - desc)."
+      },
+      "model": {
+        "checkpoint": "/Users/martin/Git/splice-playground/backend/app/ai_models/spliceai_window=10000.pt",
+        "flank_total": 10000,
+        "pad_each": 5000,
+        "input_len": 51507,
+        "output_len": 41507
+      },
+      "canonical_sites": [
+        {
+          "kind": "exon1_donor",
+          "site_type": "donor",
+          "exon_number": 1,
+          "pos_gene0": 80,
+          "genomic_1b": 2048065,
+          "junction_cut_gene0": {
+            "left_gene0": 80,
+            "right_gene0": 81
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9918210506439209,
+          "rank": 33,
+          "percentile": 99.92290271286079
+        },
+        {
+          "kind": "exon2_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 2,
+          "pos_gene0": 602,
+          "genomic_1b": 2048587,
+          "junction_cut_gene0": {
+            "left_gene0": 601,
+            "right_gene0": 602
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9619845151901245,
+          "rank": 35,
+          "percentile": 99.91808413241459
+        },
+        {
+          "kind": "exon2_donor",
+          "site_type": "donor",
+          "exon_number": 2,
+          "pos_gene0": 768,
+          "genomic_1b": 2048753,
+          "junction_cut_gene0": {
+            "left_gene0": 768,
+            "right_gene0": 769
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9965369701385498,
+          "rank": 31,
+          "percentile": 99.92772129330699
+        },
+        {
+          "kind": "exon3_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 3,
+          "pos_gene0": 2415,
+          "genomic_1b": 2050400,
+          "junction_cut_gene0": {
+            "left_gene0": 2414,
+            "right_gene0": 2415
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9995275735855103,
+          "rank": 10,
+          "percentile": 99.9783163879921
+        },
+        {
+          "kind": "exon3_donor",
+          "site_type": "donor",
+          "exon_number": 3,
+          "pos_gene0": 2501,
+          "genomic_1b": 2050486,
+          "junction_cut_gene0": {
+            "left_gene0": 2501,
+            "right_gene0": 2502
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999678134918213,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon4_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 4,
+          "pos_gene0": 5357,
+          "genomic_1b": 2053342,
+          "junction_cut_gene0": {
+            "left_gene0": 5356,
+            "right_gene0": 5357
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9983419179916382,
+          "rank": 21,
+          "percentile": 99.95181419553799
+        },
+        {
+          "kind": "exon4_donor",
+          "site_type": "donor",
+          "exon_number": 4,
+          "pos_gene0": 5467,
+          "genomic_1b": 2053452,
+          "junction_cut_gene0": {
+            "left_gene0": 5467,
+            "right_gene0": 5468
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9992731213569641,
+          "rank": 23,
+          "percentile": 99.9469956150918
+        },
+        {
+          "kind": "exon5_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 5,
+          "pos_gene0": 6311,
+          "genomic_1b": 2054296,
+          "junction_cut_gene0": {
+            "left_gene0": 6310,
+            "right_gene0": 6311
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9993510842323303,
+          "rank": 12,
+          "percentile": 99.9734978075459
+        },
+        {
+          "kind": "exon5_donor",
+          "site_type": "donor",
+          "exon_number": 5,
+          "pos_gene0": 6455,
+          "genomic_1b": 2054440,
+          "junction_cut_gene0": {
+            "left_gene0": 6455,
+            "right_gene0": 6456
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994261264801025,
+          "rank": 21,
+          "percentile": 99.95181419553799
+        },
+        {
+          "kind": "exon6_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 6,
+          "pos_gene0": 7417,
+          "genomic_1b": 2055402,
+          "junction_cut_gene0": {
+            "left_gene0": 7416,
+            "right_gene0": 7417
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9899041056632996,
+          "rank": 28,
+          "percentile": 99.9349491639763
+        },
+        {
+          "kind": "exon6_donor",
+          "site_type": "donor",
+          "exon_number": 6,
+          "pos_gene0": 7534,
+          "genomic_1b": 2055519,
+          "junction_cut_gene0": {
+            "left_gene0": 7534,
+            "right_gene0": 7535
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9643562436103821,
+          "rank": 37,
+          "percentile": 99.9132655519684
+        },
+        {
+          "kind": "exon7_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 7,
+          "pos_gene0": 8211,
+          "genomic_1b": 2056196,
+          "junction_cut_gene0": {
+            "left_gene0": 8210,
+            "right_gene0": 8211
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9756640195846558,
+          "rank": 33,
+          "percentile": 99.92290271286079
+        },
+        {
+          "kind": "exon7_donor",
+          "site_type": "donor",
+          "exon_number": 7,
+          "pos_gene0": 8259,
+          "genomic_1b": 2056244,
+          "junction_cut_gene0": {
+            "left_gene0": 8259,
+            "right_gene0": 8260
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9930328130722046,
+          "rank": 32,
+          "percentile": 99.92531200308389
+        },
+        {
+          "kind": "exon8_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 8,
+          "pos_gene0": 8659,
+          "genomic_1b": 2056644,
+          "junction_cut_gene0": {
+            "left_gene0": 8658,
+            "right_gene0": 8659
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9810583591461182,
+          "rank": 31,
+          "percentile": 99.92772129330699
+        },
+        {
+          "kind": "exon8_donor",
+          "site_type": "donor",
+          "exon_number": 8,
+          "pos_gene0": 8784,
+          "genomic_1b": 2056769,
+          "junction_cut_gene0": {
+            "left_gene0": 8784,
+            "right_gene0": 8785
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997355341911316,
+          "rank": 15,
+          "percentile": 99.9662699368766
+        },
+        {
+          "kind": "exon9_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 9,
+          "pos_gene0": 9120,
+          "genomic_1b": 2057105,
+          "junction_cut_gene0": {
+            "left_gene0": 9119,
+            "right_gene0": 9120
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9998794794082642,
+          "rank": 2,
+          "percentile": 99.9975907097769
+        },
+        {
+          "kind": "exon9_donor",
+          "site_type": "donor",
+          "exon_number": 9,
+          "pos_gene0": 9193,
+          "genomic_1b": 2057178,
+          "junction_cut_gene0": {
+            "left_gene0": 9193,
+            "right_gene0": 9194
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999619722366333,
+          "rank": 3,
+          "percentile": 99.9951814195538
+        },
+        {
+          "kind": "exon10_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 10,
+          "pos_gene0": 10762,
+          "genomic_1b": 2058747,
+          "junction_cut_gene0": {
+            "left_gene0": 10761,
+            "right_gene0": 10762
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9952367544174194,
+          "rank": 26,
+          "percentile": 99.9397677444225
+        },
+        {
+          "kind": "exon10_donor",
+          "site_type": "donor",
+          "exon_number": 10,
+          "pos_gene0": 10888,
+          "genomic_1b": 2058873,
+          "junction_cut_gene0": {
+            "left_gene0": 10888,
+            "right_gene0": 10889
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9990639090538025,
+          "rank": 25,
+          "percentile": 99.9421770346456
+        },
+        {
+          "kind": "exon11_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 11,
+          "pos_gene0": 12685,
+          "genomic_1b": 2060670,
+          "junction_cut_gene0": {
+            "left_gene0": 12684,
+            "right_gene0": 12685
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9988652467727661,
+          "rank": 16,
+          "percentile": 99.96386064665349
+        },
+        {
+          "kind": "exon11_donor",
+          "site_type": "donor",
+          "exon_number": 11,
+          "pos_gene0": 12828,
+          "genomic_1b": 2060813,
+          "junction_cut_gene0": {
+            "left_gene0": 12828,
+            "right_gene0": 12829
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998983144760132,
+          "rank": 8,
+          "percentile": 99.9831349684383
+        },
+        {
+          "kind": "exon12_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 12,
+          "pos_gene0": 13886,
+          "genomic_1b": 2061871,
+          "junction_cut_gene0": {
+            "left_gene0": 13885,
+            "right_gene0": 13886
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.998626708984375,
+          "rank": 19,
+          "percentile": 99.9566327759842
+        },
+        {
+          "kind": "exon12_donor",
+          "site_type": "donor",
+          "exon_number": 12,
+          "pos_gene0": 14023,
+          "genomic_1b": 2062008,
+          "junction_cut_gene0": {
+            "left_gene0": 14023,
+            "right_gene0": 14024
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9678710699081421,
+          "rank": 36,
+          "percentile": 99.91567484219149
+        },
+        {
+          "kind": "exon13_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 13,
+          "pos_gene0": 14512,
+          "genomic_1b": 2062497,
+          "junction_cut_gene0": {
+            "left_gene0": 14511,
+            "right_gene0": 14512
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9990825653076172,
+          "rank": 14,
+          "percentile": 99.9686792270997
+        },
+        {
+          "kind": "exon13_donor",
+          "site_type": "donor",
+          "exon_number": 13,
+          "pos_gene0": 14615,
+          "genomic_1b": 2062600,
+          "junction_cut_gene0": {
+            "left_gene0": 14615,
+            "right_gene0": 14616
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998207688331604,
+          "rank": 12,
+          "percentile": 99.9734978075459
+        },
+        {
+          "kind": "exon14_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 14,
+          "pos_gene0": 14987,
+          "genomic_1b": 2062972,
+          "junction_cut_gene0": {
+            "left_gene0": 14986,
+            "right_gene0": 14987
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9874629378318787,
+          "rank": 29,
+          "percentile": 99.93253987375319
+        },
+        {
+          "kind": "exon14_donor",
+          "site_type": "donor",
+          "exon_number": 14,
+          "pos_gene0": 15068,
+          "genomic_1b": 2063053,
+          "junction_cut_gene0": {
+            "left_gene0": 15068,
+            "right_gene0": 15069
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9981203675270081,
+          "rank": 27,
+          "percentile": 99.93735845419938
+        },
+        {
+          "kind": "exon15_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 15,
+          "pos_gene0": 16287,
+          "genomic_1b": 2064272,
+          "junction_cut_gene0": {
+            "left_gene0": 16286,
+            "right_gene0": 16287
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9967803955078125,
+          "rank": 25,
+          "percentile": 99.9421770346456
+        },
+        {
+          "kind": "exon15_donor",
+          "site_type": "donor",
+          "exon_number": 15,
+          "pos_gene0": 16442,
+          "genomic_1b": 2064427,
+          "junction_cut_gene0": {
+            "left_gene0": 16442,
+            "right_gene0": 16443
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999395608901978,
+          "rank": 5,
+          "percentile": 99.99036283910759
+        },
+        {
+          "kind": "exon16_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 16,
+          "pos_gene0": 17534,
+          "genomic_1b": 2065519,
+          "junction_cut_gene0": {
+            "left_gene0": 17533,
+            "right_gene0": 17534
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9986644983291626,
+          "rank": 18,
+          "percentile": 99.95904206620729
+        },
+        {
+          "kind": "exon16_donor",
+          "site_type": "donor",
+          "exon_number": 16,
+          "pos_gene0": 17650,
+          "genomic_1b": 2065635,
+          "junction_cut_gene0": {
+            "left_gene0": 17650,
+            "right_gene0": 17651
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9991245865821838,
+          "rank": 24,
+          "percentile": 99.9445863248687
+        },
+        {
+          "kind": "exon17_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 17,
+          "pos_gene0": 22471,
+          "genomic_1b": 2070456,
+          "junction_cut_gene0": {
+            "left_gene0": 22470,
+            "right_gene0": 22471
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9987550973892212,
+          "rank": 17,
+          "percentile": 99.9614513564304
+        },
+        {
+          "kind": "exon17_donor",
+          "site_type": "donor",
+          "exon_number": 17,
+          "pos_gene0": 22593,
+          "genomic_1b": 2070578,
+          "junction_cut_gene0": {
+            "left_gene0": 22593,
+            "right_gene0": 22594
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998030066490173,
+          "rank": 13,
+          "percentile": 99.9710885173228
+        },
+        {
+          "kind": "exon18_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 18,
+          "pos_gene0": 23525,
+          "genomic_1b": 2071510,
+          "junction_cut_gene0": {
+            "left_gene0": 23524,
+            "right_gene0": 23525
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996040463447571,
+          "rank": 9,
+          "percentile": 99.9807256782152
+        },
+        {
+          "kind": "exon18_donor",
+          "site_type": "donor",
+          "exon_number": 18,
+          "pos_gene0": 23631,
+          "genomic_1b": 2071616,
+          "junction_cut_gene0": {
+            "left_gene0": 23631,
+            "right_gene0": 23632
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9980193376541138,
+          "rank": 28,
+          "percentile": 99.9349491639763
+        },
+        {
+          "kind": "exon19_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 19,
+          "pos_gene0": 23799,
+          "genomic_1b": 2071784,
+          "junction_cut_gene0": {
+            "left_gene0": 23798,
+            "right_gene0": 23799
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9997426867485046,
+          "rank": 4,
+          "percentile": 99.9927721293307
+        },
+        {
+          "kind": "exon19_donor",
+          "site_type": "donor",
+          "exon_number": 19,
+          "pos_gene0": 23949,
+          "genomic_1b": 2071934,
+          "junction_cut_gene0": {
+            "left_gene0": 23949,
+            "right_gene0": 23950
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9996687173843384,
+          "rank": 17,
+          "percentile": 99.9614513564304
+        },
+        {
+          "kind": "exon20_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 20,
+          "pos_gene0": 24256,
+          "genomic_1b": 2072241,
+          "junction_cut_gene0": {
+            "left_gene0": 24255,
+            "right_gene0": 24256
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9664949774742126,
+          "rank": 34,
+          "percentile": 99.92049342263769
+        },
+        {
+          "kind": "exon20_donor",
+          "site_type": "donor",
+          "exon_number": 20,
+          "pos_gene0": 24378,
+          "genomic_1b": 2072363,
+          "junction_cut_gene0": {
+            "left_gene0": 24378,
+            "right_gene0": 24379
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.7155362367630005,
+          "rank": 41,
+          "percentile": 99.903628391076
+        },
+        {
+          "kind": "exon21_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 21,
+          "pos_gene0": 24864,
+          "genomic_1b": 2072849,
+          "junction_cut_gene0": {
+            "left_gene0": 24863,
+            "right_gene0": 24864
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9869213104248047,
+          "rank": 30,
+          "percentile": 99.9301305835301
+        },
+        {
+          "kind": "exon21_donor",
+          "site_type": "donor",
+          "exon_number": 21,
+          "pos_gene0": 24998,
+          "genomic_1b": 2072983,
+          "junction_cut_gene0": {
+            "left_gene0": 24998,
+            "right_gene0": 24999
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9978901743888855,
+          "rank": 29,
+          "percentile": 99.93253987375319
+        },
+        {
+          "kind": "exon22_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 22,
+          "pos_gene0": 26215,
+          "genomic_1b": 2074200,
+          "junction_cut_gene0": {
+            "left_gene0": 26214,
+            "right_gene0": 26215
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9989995360374451,
+          "rank": 15,
+          "percentile": 99.9662699368766
+        },
+        {
+          "kind": "exon22_donor",
+          "site_type": "donor",
+          "exon_number": 22,
+          "pos_gene0": 26404,
+          "genomic_1b": 2074389,
+          "junction_cut_gene0": {
+            "left_gene0": 26404,
+            "right_gene0": 26405
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.999909520149231,
+          "rank": 6,
+          "percentile": 99.9879535488845
+        },
+        {
+          "kind": "exon23_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 23,
+          "pos_gene0": 27814,
+          "genomic_1b": 2075799,
+          "junction_cut_gene0": {
+            "left_gene0": 27813,
+            "right_gene0": 27814
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996107220649719,
+          "rank": 8,
+          "percentile": 99.9831349684383
+        },
+        {
+          "kind": "exon23_donor",
+          "site_type": "donor",
+          "exon_number": 23,
+          "pos_gene0": 27907,
+          "genomic_1b": 2075892,
+          "junction_cut_gene0": {
+            "left_gene0": 27907,
+            "right_gene0": 27908
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998944997787476,
+          "rank": 9,
+          "percentile": 99.9807256782152
+        },
+        {
+          "kind": "exon24_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 24,
+          "pos_gene0": 28083,
+          "genomic_1b": 2076068,
+          "junction_cut_gene0": {
+            "left_gene0": 28082,
+            "right_gene0": 28083
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.926598072052002,
+          "rank": 38,
+          "percentile": 99.91085626174528
+        },
+        {
+          "kind": "exon24_donor",
+          "site_type": "donor",
+          "exon_number": 24,
+          "pos_gene0": 28185,
+          "genomic_1b": 2076170,
+          "junction_cut_gene0": {
+            "left_gene0": 28185,
+            "right_gene0": 28186
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.8878233432769775,
+          "rank": 39,
+          "percentile": 99.9084469715222
+        },
+        {
+          "kind": "exon25_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 25,
+          "pos_gene0": 28506,
+          "genomic_1b": 2076491,
+          "junction_cut_gene0": {
+            "left_gene0": 28505,
+            "right_gene0": 28506
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9983816146850586,
+          "rank": 20,
+          "percentile": 99.95422348576109
+        },
+        {
+          "kind": "exon25_donor",
+          "site_type": "donor",
+          "exon_number": 25,
+          "pos_gene0": 28600,
+          "genomic_1b": 2076585,
+          "junction_cut_gene0": {
+            "left_gene0": 28600,
+            "right_gene0": 28601
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994444251060486,
+          "rank": 20,
+          "percentile": 99.95422348576109
+        },
+        {
+          "kind": "exon26_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 26,
+          "pos_gene0": 29613,
+          "genomic_1b": 2077598,
+          "junction_cut_gene0": {
+            "left_gene0": 29612,
+            "right_gene0": 29613
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.40855637192726135,
+          "rank": 42,
+          "percentile": 99.90121910085288
+        },
+        {
+          "kind": "exon26_donor",
+          "site_type": "donor",
+          "exon_number": 26,
+          "pos_gene0": 29741,
+          "genomic_1b": 2077726,
+          "junction_cut_gene0": {
+            "left_gene0": 29741,
+            "right_gene0": 29742
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9290057420730591,
+          "rank": 38,
+          "percentile": 99.91085626174528
+        },
+        {
+          "kind": "exon27_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 27,
+          "pos_gene0": 31047,
+          "genomic_1b": 2079032,
+          "junction_cut_gene0": {
+            "left_gene0": 31046,
+            "right_gene0": 31047
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.6722355484962463,
+          "rank": 41,
+          "percentile": 99.903628391076
+        },
+        {
+          "kind": "exon27_donor",
+          "site_type": "donor",
+          "exon_number": 27,
+          "pos_gene0": 31211,
+          "genomic_1b": 2079196,
+          "junction_cut_gene0": {
+            "left_gene0": 31211,
+            "right_gene0": 31212
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994533658027649,
+          "rank": 19,
+          "percentile": 99.9566327759842
+        },
+        {
+          "kind": "exon28_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 28,
+          "pos_gene0": 31291,
+          "genomic_1b": 2079276,
+          "junction_cut_gene0": {
+            "left_gene0": 31290,
+            "right_gene0": 31291
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.8971146941184998,
+          "rank": 39,
+          "percentile": 99.9084469715222
+        },
+        {
+          "kind": "exon28_donor",
+          "site_type": "donor",
+          "exon_number": 28,
+          "pos_gene0": 31443,
+          "genomic_1b": 2079428,
+          "junction_cut_gene0": {
+            "left_gene0": 31443,
+            "right_gene0": 31444
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9902382493019104,
+          "rank": 35,
+          "percentile": 99.91808413241459
+        },
+        {
+          "kind": "exon29_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 29,
+          "pos_gene0": 31572,
+          "genomic_1b": 2079557,
+          "junction_cut_gene0": {
+            "left_gene0": 31571,
+            "right_gene0": 31572
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9772748947143555,
+          "rank": 32,
+          "percentile": 99.92531200308389
+        },
+        {
+          "kind": "exon29_donor",
+          "site_type": "donor",
+          "exon_number": 29,
+          "pos_gene0": 31684,
+          "genomic_1b": 2079669,
+          "junction_cut_gene0": {
+            "left_gene0": 31684,
+            "right_gene0": 31685
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9905219078063965,
+          "rank": 34,
+          "percentile": 99.92049342263769
+        },
+        {
+          "kind": "exon30_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 30,
+          "pos_gene0": 32180,
+          "genomic_1b": 2080165,
+          "junction_cut_gene0": {
+            "left_gene0": 32179,
+            "right_gene0": 32180
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9993712306022644,
+          "rank": 11,
+          "percentile": 99.975907097769
+        },
+        {
+          "kind": "exon30_donor",
+          "site_type": "donor",
+          "exon_number": 30,
+          "pos_gene0": 32392,
+          "genomic_1b": 2080377,
+          "junction_cut_gene0": {
+            "left_gene0": 32392,
+            "right_gene0": 32393
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998389482498169,
+          "rank": 10,
+          "percentile": 99.9783163879921
+        },
+        {
+          "kind": "exon31_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 31,
+          "pos_gene0": 33610,
+          "genomic_1b": 2081595,
+          "junction_cut_gene0": {
+            "left_gene0": 33609,
+            "right_gene0": 33610
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996769428253174,
+          "rank": 6,
+          "percentile": 99.9879535488845
+        },
+        {
+          "kind": "exon31_donor",
+          "site_type": "donor",
+          "exon_number": 31,
+          "pos_gene0": 33813,
+          "genomic_1b": 2081798,
+          "junction_cut_gene0": {
+            "left_gene0": 33813,
+            "right_gene0": 33814
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994885921478271,
+          "rank": 18,
+          "percentile": 99.95904206620729
+        },
+        {
+          "kind": "exon32_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 32,
+          "pos_gene0": 34451,
+          "genomic_1b": 2082436,
+          "junction_cut_gene0": {
+            "left_gene0": 34450,
+            "right_gene0": 34451
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.05995211377739906,
+          "rank": 48,
+          "percentile": 99.88676335951429
+        },
+        {
+          "kind": "exon32_donor",
+          "site_type": "donor",
+          "exon_number": 32,
+          "pos_gene0": 34519,
+          "genomic_1b": 2082504,
+          "junction_cut_gene0": {
+            "left_gene0": 34519,
+            "right_gene0": 34520
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.837412416934967,
+          "rank": 40,
+          "percentile": 99.90603768129908
+        },
+        {
+          "kind": "exon33_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 33,
+          "pos_gene0": 35710,
+          "genomic_1b": 2083695,
+          "junction_cut_gene0": {
+            "left_gene0": 35709,
+            "right_gene0": 35710
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9997385144233704,
+          "rank": 5,
+          "percentile": 99.99036283910759
+        },
+        {
+          "kind": "exon33_donor",
+          "site_type": "donor",
+          "exon_number": 33,
+          "pos_gene0": 35831,
+          "genomic_1b": 2083816,
+          "junction_cut_gene0": {
+            "left_gene0": 35831,
+            "right_gene0": 35832
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997126460075378,
+          "rank": 16,
+          "percentile": 99.96386064665349
+        },
+        {
+          "kind": "exon34_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 34,
+          "pos_gene0": 36243,
+          "genomic_1b": 2084228,
+          "junction_cut_gene0": {
+            "left_gene0": 36242,
+            "right_gene0": 36243
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9982544779777527,
+          "rank": 22,
+          "percentile": 99.94940490531489
+        },
+        {
+          "kind": "exon34_donor",
+          "site_type": "donor",
+          "exon_number": 34,
+          "pos_gene0": 36730,
+          "genomic_1b": 2084715,
+          "junction_cut_gene0": {
+            "left_gene0": 36730,
+            "right_gene0": 36731
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9977261424064636,
+          "rank": 30,
+          "percentile": 99.9301305835301
+        },
+        {
+          "kind": "exon35_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 35,
+          "pos_gene0": 36966,
+          "genomic_1b": 2084951,
+          "junction_cut_gene0": {
+            "left_gene0": 36965,
+            "right_gene0": 36966
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9932078719139099,
+          "rank": 27,
+          "percentile": 99.93735845419938
+        },
+        {
+          "kind": "exon35_donor",
+          "site_type": "donor",
+          "exon_number": 35,
+          "pos_gene0": 37041,
+          "genomic_1b": 2085026,
+          "junction_cut_gene0": {
+            "left_gene0": 37041,
+            "right_gene0": 37042
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9989268183708191,
+          "rank": 26,
+          "percentile": 99.9397677444225
+        },
+        {
+          "kind": "exon36_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 36,
+          "pos_gene0": 37245,
+          "genomic_1b": 2085230,
+          "junction_cut_gene0": {
+            "left_gene0": 37244,
+            "right_gene0": 37245
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9606941342353821,
+          "rank": 36,
+          "percentile": 99.91567484219149
+        },
+        {
+          "kind": "exon36_donor",
+          "site_type": "donor",
+          "exon_number": 36,
+          "pos_gene0": 37337,
+          "genomic_1b": 2085322,
+          "junction_cut_gene0": {
+            "left_gene0": 37337,
+            "right_gene0": 37338
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9998239874839783,
+          "rank": 11,
+          "percentile": 99.975907097769
+        },
+        {
+          "kind": "exon37_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 37,
+          "pos_gene0": 38208,
+          "genomic_1b": 2086193,
+          "junction_cut_gene0": {
+            "left_gene0": 38207,
+            "right_gene0": 38208
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9996228218078613,
+          "rank": 7,
+          "percentile": 99.98554425866139
+        },
+        {
+          "kind": "exon37_donor",
+          "site_type": "donor",
+          "exon_number": 37,
+          "pos_gene0": 38394,
+          "genomic_1b": 2086379,
+          "junction_cut_gene0": {
+            "left_gene0": 38394,
+            "right_gene0": 38395
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9997885823249817,
+          "rank": 14,
+          "percentile": 99.9686792270997
+        },
+        {
+          "kind": "exon38_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 38,
+          "pos_gene0": 38747,
+          "genomic_1b": 2086732,
+          "junction_cut_gene0": {
+            "left_gene0": 38746,
+            "right_gene0": 38747
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9999617338180542,
+          "rank": 1,
+          "percentile": 100.0
+        },
+        {
+          "kind": "exon38_donor",
+          "site_type": "donor",
+          "exon_number": 38,
+          "pos_gene0": 38886,
+          "genomic_1b": 2086871,
+          "junction_cut_gene0": {
+            "left_gene0": 38886,
+            "right_gene0": 38887
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999063014984131,
+          "rank": 7,
+          "percentile": 99.98554425866139
+        },
+        {
+          "kind": "exon39_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 39,
+          "pos_gene0": 39878,
+          "genomic_1b": 2087863,
+          "junction_cut_gene0": {
+            "left_gene0": 39877,
+            "right_gene0": 39878
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9997972846031189,
+          "rank": 3,
+          "percentile": 99.9951814195538
+        },
+        {
+          "kind": "exon39_donor",
+          "site_type": "donor",
+          "exon_number": 39,
+          "pos_gene0": 39956,
+          "genomic_1b": 2087941,
+          "junction_cut_gene0": {
+            "left_gene0": 39956,
+            "right_gene0": 39957
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999434947967529,
+          "rank": 4,
+          "percentile": 99.9927721293307
+        },
+        {
+          "kind": "exon40_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 40,
+          "pos_gene0": 40063,
+          "genomic_1b": 2088048,
+          "junction_cut_gene0": {
+            "left_gene0": 40062,
+            "right_gene0": 40063
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9974849224090576,
+          "rank": 24,
+          "percentile": 99.9445863248687
+        },
+        {
+          "kind": "exon40_donor",
+          "site_type": "donor",
+          "exon_number": 40,
+          "pos_gene0": 40154,
+          "genomic_1b": 2088139,
+          "junction_cut_gene0": {
+            "left_gene0": 40154,
+            "right_gene0": 40155
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9999634027481079,
+          "rank": 2,
+          "percentile": 99.9975907097769
+        },
+        {
+          "kind": "exon41_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 41,
+          "pos_gene0": 40242,
+          "genomic_1b": 2088227,
+          "junction_cut_gene0": {
+            "left_gene0": 40241,
+            "right_gene0": 40242
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9993245601654053,
+          "rank": 13,
+          "percentile": 99.9710885173228
+        },
+        {
+          "kind": "exon41_donor",
+          "site_type": "donor",
+          "exon_number": 41,
+          "pos_gene0": 40340,
+          "genomic_1b": 2088325,
+          "junction_cut_gene0": {
+            "left_gene0": 40340,
+            "right_gene0": 40341
+          },
+          "motif_db": "GT",
+          "motif_ok_db": true,
+          "prob": 0.9994202852249146,
+          "rank": 22,
+          "percentile": 99.94940490531489
+        },
+        {
+          "kind": "exon42_acceptor",
+          "site_type": "acceptor",
+          "exon_number": 42,
+          "pos_gene0": 40461,
+          "genomic_1b": 2088446,
+          "junction_cut_gene0": {
+            "left_gene0": 40460,
+            "right_gene0": 40461
+          },
+          "motif_db": "AG",
+          "motif_ok_db": true,
+          "prob": 0.9978204965591431,
+          "rank": 23,
+          "percentile": 99.9469956150918
+        }
+      ],
+      "summary": {
+        "acceptor": {
+          "n": 41,
+          "prob_min": 0.05995211377739906,
+          "prob_median": 0.9983419179916382,
+          "prob_max": 0.9999617338180542,
+          "rank_best": 1,
+          "rank_median": 21,
+          "motif_ok_rate": 1.0
+        },
+        "donor": {
+          "n": 41,
+          "prob_min": 0.7155362367630005,
+          "prob_median": 0.9994261264801025,
+          "prob_max": 0.9999678134918213,
+          "rank_best": 1,
+          "rank_median": 21,
+          "motif_ok_rate": 1.0
+        }
+      },
+      "orf_sanity_exon_only": {
+        "ok": true,
+        "start_idx0": 110,
+        "stop_idx0": 5531,
+        "stop_codon": "TGA",
+        "orf_len_nt": 5424,
+        "orf_len_aa": 1808,
+        "mRNA_len": 6415
+      }
+    }
+  ]
+}

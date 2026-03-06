@@ -1,21 +1,17 @@
-# app/schemas/gene.py
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Optional, Literal
 
-from pydantic import Field
-
-from app.schemas.common import SchemaBase
+from pydantic import BaseModel, Field
 
 
-class Gene(SchemaBase):
+class Gene(BaseModel):
     gene_id: str
     gene_symbol: str
     chromosome: Optional[str] = None
-    strand: Literal["+", "-"]
-
-    length: int = Field(..., gt=0)
-    exon_count: int = Field(..., gt=0)
+    strand: Literal["+", "-"] = "+"
+    length: int = Field(gt=0)
+    exon_count: int = Field(gt=0)
 
     canonical_transcript_id: Optional[str] = None
     canonical_source: Optional[str] = None

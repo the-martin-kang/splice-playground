@@ -37,11 +37,15 @@ class ReferenceGenome:
             raise KeyError(f"Chromosome {chrom!r} not found in FASTA. Example keys: {sorted(list(self._keys))[:5]}")
         return c
 
-    def fetch_seq(self, chrom: str, start0: int, end0: int, strand: str = "+") -> str:
-        """Fetch 0-based half-open [start0, end0) and apply Mission6 '-' shift + reverse-complement.
+    def fetch_seq(self, chrom: str, start0: int, end0: int, strand: str = "+", mission6_neg_shift: bool = True) -> str:
+        """Fetch 0-based half-open [start0, end0) and apply reverse-complement for negative strand.
 
-        IMPORTANT: Mission6 notebook applied an off-by-one fix for negative strand:
-          if strand == '-', we shift start and end by +1 BEFORE slicing, then reverse-complement.
+        NOTE:
+          - In the original Mission6 notebook, an off-by-one workaround was applied for negative strand
+            (shift start/end by +1 before slicing). That behavior is kept for backward-compatibility
+            when mission6_neg_shift=True.
+          - For DB canonical sequence validation, you usually want mission6_neg_shift=False
+            to fetch the standard transcript span exactly.
         """
         if start0 < 0:
             raise ValueError("start0 must be >= 0 (clip before calling fetch_seq)")
@@ -50,7 +54,7 @@ class ReferenceGenome:
 
         key = self._normalize_key(chrom)
 
-        if strand == "-":
+        if strand == "-" and mission6_neg_shift:
             start0 += 1
             end0 += 1
 

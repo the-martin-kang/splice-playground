@@ -1,73 +1,54 @@
-# app/db/repositories/disease_repo.py
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.db.supabase_client import DBNotFoundError, execute, ensure_list, ensure_one, get_supabase_client
+from app.db.supabase_client import get_supabase_client
+from app.db.repositories._helpers import as_list, first_or_none, unwrap_execute_result
 
 
-class DiseaseRepo:
-    TABLE = "disease"
+def list_diseases(limit: int = 100, offset: int = 0) -> Tuple[List[Dict[str, Any]], int]:
+    sb = get_supabase_client()
+    q = (
+        sb.table("disease")
+        .select("disease_id,disease_name,description,gene_id,image_path", count="exact")
+        .range(offset, offset + limit - 1)
+        .order("disease_id")
+    )
+    res = q.execute()
+    data, count, _ = unwrap_execute_result(res)
+    items = as_list(data)
+    total = int(count) if count is not None else len(items)
+    return items, total
 
-    DEFAULT_SELECT = "disease_id,disease_name,description,image_path,gene_id,created_at,updated_at"
 
-    @staticmethod
-    def list_diseases(
-        *,
-        limit: int = 100,
-        offset: int = 0,
-        select: str = DEFAULT_SELECT,
-        order_by: str = "disease_name",
-        ascending: bool = True,
-        include_count: bool = False,
-    ) -> Tuple[List[Dict[str, Any]], int]:
-        """
-        Returns (items, count)
-        - count is exact if include_count=True and postgrest supports it, else len(items)
-        """
-        sb = get_supabase_client()
-        q = sb.table(DiseaseRepo.TABLE)
+def get_disease(disease_id: str) -> Optional[Dict[str, Any]]:
+    sb = get_supabase_client()
+    res = sb.table("disease").select("*").eq("disease_id", disease_id).limit(1).execute()
+    data, _, _ = unwrap_execute_result(res)
+    return first_or_none(data)
 
-        # count="exact" 지원 여부가 버전별로 다를 수 있어 방어적으로 처리
-        if include_count:
-            try:
-                q = q.select(select, count="exact")
-            except TypeError:
-                q = q.select(select)
-        else:
-            q = q.select(select)
 
-        q = q.order(order_by, desc=not ascending).range(offset, offset + max(limit, 1) - 1)
+def get_gene_ids_for_disease(disease_id: str) -> List[str]:
+    """Return gene_id(s) for a disease.
 
-        res = execute(q)
-        items = ensure_list(res.data)
-        count = res.count if (include_count and res.count is not None) else len(items)
-        return items, count
+    New schema: disease.gene_id exists.
+    Fallback: disease_gene join table.
+    """
+    d = get_disease(disease_id)
+    if d:
+        gid = d.get("gene_id")
+        if gid:
+            return [str(gid)]
 
-    @staticmethod
-    def get_disease_by_id(
-        disease_id: str,
-        *,
-        select: str = DEFAULT_SELECT,
-    ) -> Dict[str, Any]:
-        sb = get_supabase_client()
-        q = (
-            sb.table(DiseaseRepo.TABLE)
-            .select(select)
-            .eq("disease_id", disease_id)
-            .limit(1)
-        )
-        res = execute(q)
-        rows = ensure_list(res.data)
-        return ensure_one(rows, not_found_message=f"disease not found: {disease_id}")
-
-    @staticmethod
-    def require_image_path(disease_row: Dict[str, Any]) -> str:
-        """
-        Helper: disease_row에서 image_path를 강제.
-        (B 방식 signed URL 생성은 services/storage_service.py에서 수행)
-        """
-        image_path = disease_row.get("image_path")
-        if not image_path:
-            raise DBNotFoundError(f"image_path is empty for disease_id={disease_row.get('disease_id')}")
-        return str(image_path)
+    # fallback join table
+    sb = get_supabase_client()
+    res = (
+        sb.table("disease_gene")
+        .select("gene_id")
+        .eq("disease_id", disease_id)
+        .order("gene_id")
+        .execute()
+    )
+    data, _, _ = unwrap_execute_result(res)
+    rows = as_list(data)
+    return [str(r["gene_id"]) for r in rows if r.get("gene_id")]
