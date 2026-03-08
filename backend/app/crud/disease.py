@@ -8,7 +8,8 @@ from app.models.disease_gene import DiseaseGene
 from app.models.splice_altering_snv import SpliceAlteringSNV
 from app.models.region import Region
 from app.models.user_state import UserState
-from app.services.spliceai import splice_service
+from app.services.splice_model import SpliceAI
+from app.services.splice_service import SplicePredictor
 
 # --- 1. 유틸리티 함수 ---
 
@@ -189,3 +190,21 @@ def get_disease_detail_data(db: Session, disease_id: str):
     disease.image_path = get_valid_image_url(disease.image_path)
     snv_info = db.query(SpliceAlteringSNV).filter(SpliceAlteringSNV.disease_id == disease_id).first()
     return {"disease": disease, "seed_snv": snv_info}
+
+
+def get_full_gene_sequence(db: Session, gene_id: str):
+    """
+    특정 유전자의 모든 Region을 좌표 순서대로 이어붙여 전체 서열을 만듭니다.
+    반환값: (전체 서열 문자열, 시작 절대 좌표)
+    """
+    regions = db.query(Region).filter(
+        Region.gene_id == gene_id
+    ).order_by(Region.gene_start_idx).all()
+    
+    if not regions:
+        return "", 0
+        
+    full_seq = "".join([r.sequence for r in regions])
+    start_offset = regions[0].gene_start_idx
+    
+    return full_seq, start_offset
