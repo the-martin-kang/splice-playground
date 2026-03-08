@@ -12,6 +12,7 @@
 !uv.lock
 !.python-version
 !app/ai_models/*.pt
+!*.pt
 # 앱 소스
 !app/
 !app/**
@@ -40,10 +41,6 @@ app/**/.env.*
 # 4) (중요) 모델 weight/대용량 파일은 기본 제외
 #    나중에 Step3에서 모델을 이미지에 포함할지, S3/EFS로 둘지 결정 가능
 # -------------------------
-app/ai_models/**/*.pt
-app/ai_models/**/*.pth
-app/ai_models/**/*.ckpt
-app/ai_models/**/*.onnx
 scr/
 validation_pkg/
 dev_gui/

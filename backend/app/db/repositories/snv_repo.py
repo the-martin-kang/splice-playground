@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import re
@@ -21,11 +22,6 @@ def _parse_coordinate_from_note(note: Optional[str]) -> Tuple[Optional[str], Opt
 
 
 def get_representative_snv(disease_id: str) -> Optional[Dict[str, Any]]:
-    """Fetch representative splice_altering_snv for a disease.
-
-    Preferred: is_representative=true row in splice_altering_snv
-    Fallback: parse disease_id pattern: GENE_gene0_POS_REF>ALT
-    """
     sb = get_supabase_client()
     try:
         res = (
@@ -39,7 +35,6 @@ def get_representative_snv(disease_id: str) -> Optional[Dict[str, Any]]:
         data, _, _ = unwrap_execute_result(res)
         row = first_or_none(data)
         if row:
-            # normalize coordinate fields (best-effort)
             note = row.get("note")
             chrom = row.get("chromosome") or row.get("chrom") or row.get("chr")
             pos1 = row.get("pos_hg38_1") or row.get("pos1")
@@ -49,12 +44,12 @@ def get_representative_snv(disease_id: str) -> Optional[Dict[str, Any]]:
                 pos1 = pos1 or p2
             row["_chrom"] = chrom
             row["_pos1"] = int(pos1) if pos1 is not None else None
+            row.setdefault("allele_coordinate_system", "gene_direction")
             return row
     except Exception:
-        # table/column might not exist yet; continue to fallback
         pass
 
-    # fallback parse
+    # fallback parse of legacy disease_id encodes gene-direction allele
     try:
         gene, gene0, pos, change = disease_id.split("_", 3)
         if gene0 != "gene0":
@@ -72,6 +67,7 @@ def get_representative_snv(disease_id: str) -> Optional[Dict[str, Any]]:
             "is_representative": True,
             "_chrom": None,
             "_pos1": None,
+            "allele_coordinate_system": "gene_direction",
         }
     except Exception:
         return None

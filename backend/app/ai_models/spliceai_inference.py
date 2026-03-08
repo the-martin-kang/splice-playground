@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import torch
@@ -40,8 +40,24 @@ class InferenceConfig:
     device: Optional[str] = None  # 'cpu' / 'cuda' / 'mps'
 
     def torch_device(self) -> torch.device:
+        """Resolve a requested device to an available device.
+
+        Important for AWS: if `.env` had `SPLICEAI_DEVICE=mps` from local dev,
+        we must fall back to CPU on Linux.
+        """
         if self.device:
-            return torch.device(self.device)
+            req = str(self.device).strip().lower()
+            if req.startswith("cuda"):
+                return torch.device(req) if torch.cuda.is_available() else torch.device("cpu")
+            if req == "mps":
+                if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+                    return torch.device("mps")
+                return torch.device("cpu")
+            if req == "cpu":
+                return torch.device("cpu")
+            return torch.device("cpu")
+
+        # auto
         if torch.cuda.is_available():
             return torch.device("cuda")
         if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
@@ -67,6 +83,8 @@ def predict_probs_center_crop(
 
     sl = core_slice(in_length, out_length)
     device = cfg.torch_device()
+
+    # Move model and inputs to device
     model = model.to(device)
 
     x = one_hot_encode(seq)  # (4,L)

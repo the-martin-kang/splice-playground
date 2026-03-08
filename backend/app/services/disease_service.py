@@ -1,6 +1,7 @@
+
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from fastapi import HTTPException
 
@@ -17,17 +18,13 @@ from app.schemas.disease import (
 from app.schemas.gene import Gene
 from app.schemas.region import RegionBase, RegionContext
 from app.services.storage_service import create_signed_url
+from app.services.snv_alleles import complement_base
 
-
-# -------------------------
-# Helpers
-# -------------------------
 
 def _get_single_gene_id_for_disease(disease_id: str, disease_row: Dict[str, Any]) -> str:
     gid = disease_row.get("gene_id")
     if gid:
         return str(gid)
-
     gids = disease_repo.get_gene_ids_for_disease(disease_id)
     if len(gids) == 1:
         return gids[0]
@@ -40,7 +37,7 @@ def _find_focus_region_index(regions: List[Dict[str, Any]], pos_gene0: int) -> i
     for i, r in enumerate(regions):
         s = int(r["gene_start_idx"])
         e = int(r["gene_end_idx"])
-        if s <= pos_gene0 < e:
+        if s <= pos_gene0 <= e:
             return i
     raise ValueError(f"SNV pos_gene0={pos_gene0} not covered by any region")
 
@@ -82,6 +79,10 @@ def _to_disease_public(row: Dict[str, Any]) -> DiseasePublic:
         image_path=image_path,
         image_url=url,
         image_expires_in=exp,
+        is_visible_in_service=row.get("is_visible_in_service"),
+        max_supported_step=row.get("max_supported_step"),
+        seed_mode=row.get("seed_mode"),
+        note=row.get("note"),
     )
 
 
@@ -118,15 +119,12 @@ def _to_snv_model(row: Dict[str, Any]) -> SpliceAlteringSNV:
         coordinate=coord,
         note=row.get("note"),
         is_representative=row.get("is_representative"),
+        allele_coordinate_system=row.get("allele_coordinate_system"),
     )
 
 
-# -------------------------
-# Public service APIs
-# -------------------------
-
 def list_diseases(limit: int = 100, offset: int = 0) -> DiseaseListResponse:
-    rows, total = disease_repo.list_diseases(limit=limit, offset=offset)
+    rows, total = disease_repo.list_diseases(limit=limit, offset=offset, include_hidden=False)
     items = [_to_disease_public(r) for r in rows]
     return DiseaseListResponse(items=items, count=total)
 
@@ -137,7 +135,6 @@ def get_step2_payload(disease_id: str, *, include_sequence: bool = True) -> Step
         raise HTTPException(status_code=404, detail=f"disease not found: {disease_id}")
 
     gid = _get_single_gene_id_for_disease(disease_id, drow)
-
     grow = gene_repo.get_gene(gid)
     if not grow:
         raise HTTPException(status_code=404, detail=f"gene not found: {gid}")
@@ -152,11 +149,8 @@ def get_step2_payload(disease_id: str, *, include_sequence: bool = True) -> Step
 
     focus_idx = _find_focus_region_index(regions, int(snv["pos_gene0"]))
     focus_row = regions[focus_idx]
-
-    # Context 5 regions (radius=2) for UI (Step2)
     context_rows, start_idx = _pick_regions_with_shift(regions, focus_idx, radius=2)
 
-    # Window metadata (if DB row exists)
     wrow = window_repo.get_target_window(disease_id)
     if wrow:
         window = TargetWindow(
@@ -188,10 +182,7 @@ def get_step2_payload(disease_id: str, *, include_sequence: bool = True) -> Step
         constraints=Constraints(),
     )
 
-    ui_hints = UIHints(
-        highlight=Highlight(type="snv", pos_gene0=int(snv["pos_gene0"])),
-        default_view="sequence",
-    )
+    ui_hints = UIHints(highlight=Highlight(type="snv", pos_gene0=int(snv["pos_gene0"])), default_view="sequence")
 
     return Step2PayloadResponse(
         disease=_to_disease_public(drow),
@@ -202,14 +193,12 @@ def get_step2_payload(disease_id: str, *, include_sequence: bool = True) -> Step
     )
 
 
-# -------------------------
-# Region / Window utilities for validation & UI
-# -------------------------
-
 _COMP = {"A": "T", "T": "A", "C": "G", "G": "C", "N": "N"}
 
+
 def _complement_base(b: str) -> str:
-    return _COMP.get(b.upper(), "N")
+    return _COMP.get((b or "N").upper(), "N")
+
 
 def _normalize_alleles_to_seq(base_at_pos: str, ref: str, alt: str) -> Tuple[str, str, bool]:
     base = (base_at_pos or "N").upper()
@@ -222,6 +211,7 @@ def _normalize_alleles_to_seq(base_at_pos: str, ref: str, alt: str) -> Tuple[str
         return c_ref, _complement_base(alt_u), True
     return ref_u, alt_u, False
 
+
 def _build_gene_sequence(gene_len: int, regions: List[Dict[str, Any]]) -> str:
     seq = ["N"] * int(gene_len)
     for r in regions:
@@ -230,20 +220,24 @@ def _build_gene_sequence(gene_len: int, regions: List[Dict[str, Any]]) -> str:
             continue
         s = int(r["gene_start_idx"])
         e = int(r["gene_end_idx"])
-        if e <= s:
+        if e < s:
             continue
-        # clamp inside gene length
+        expected = e - s + 1
+        if len(rseq) != expected:
+            m = min(expected, len(rseq))
+            rseq = rseq[:m]
+            e = s + m - 1
         s2 = max(0, s)
-        e2 = min(int(gene_len), e)
-        if e2 <= s2:
+        e2 = min(int(gene_len) - 1, e)
+        if e2 < s2:
             continue
-        # align sequence slice
         offset = s2 - s
-        chunk = rseq[offset : offset + (e2 - s2)]
+        chunk = rseq[offset : offset + (e2 - s2 + 1)]
         if not chunk:
             continue
-        seq[s2:e2] = list(chunk)
+        seq[s2:e2+1] = list(chunk)
     return "".join(seq)
+
 
 def get_region_detail(
     disease_id: str,
@@ -256,26 +250,17 @@ def get_region_detail(
     if not drow:
         raise HTTPException(status_code=404, detail=f"disease not found: {disease_id}")
     gid = _get_single_gene_id_for_disease(disease_id, drow)
-
     row = region_repo.get_region_by_type_number(gid, region_type, int(region_number), include_sequence=include_sequence)
     if not row:
-        raise HTTPException(
-            status_code=404,
-            detail=f"region not found: gene_id={gid} {region_type}{region_number}",
-        )
+        raise HTTPException(status_code=404, detail=f"region not found: gene_id={gid} {region_type}{region_number}")
     return _to_region_base(row, include_sequence=include_sequence)
 
-def get_window_payload(
-    disease_id: str,
-    *,
-    window_size: int = 4000,
-) -> Dict[str, Any]:
-    # fetch rows
+
+def get_window_payload(disease_id: str, *, window_size: int = 4000) -> Dict[str, Any]:
     drow = disease_repo.get_disease(disease_id)
     if not drow:
         raise HTTPException(status_code=404, detail=f"disease not found: {disease_id}")
     gid = _get_single_gene_id_for_disease(disease_id, drow)
-
     grow = gene_repo.get_gene(gid)
     if not grow:
         raise HTTPException(status_code=404, detail=f"gene not found: {gid}")
@@ -291,7 +276,6 @@ def get_window_payload(
     ref = str(snv["ref"])
     alt = str(snv["alt"])
 
-    # need sequences
     regions = region_repo.list_regions_by_gene(gid, include_sequence=True)
     gene_seq = _build_gene_sequence(gene_len, regions)
 
@@ -299,7 +283,7 @@ def get_window_payload(
     if ws <= 0:
         raise HTTPException(status_code=400, detail="window_size must be > 0")
 
-    center_idx = ws // 2  # even: choose the larger center index (e.g. 4000 -> 2000)
+    center_idx = ws // 2
     start_gene0 = pos_gene0 - center_idx
     end_gene0 = start_gene0 + ws
 
@@ -333,10 +317,7 @@ def get_window_payload(
         "ref_seq": ref_seq,
         "alt_seq": alt_seq,
     }
-
-    # legacy convenience fields (for older validation scripts)
     if ws == 4000:
         out["ref_seq_4000"] = ref_seq
         out["alt_seq_4000"] = alt_seq
-
     return out

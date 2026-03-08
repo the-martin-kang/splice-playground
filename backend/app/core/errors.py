@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -28,6 +29,10 @@ def _code_from_status(status_code: int) -> str:
     return "HTTP_ERROR"
 
 
+def _debug_errors() -> bool:
+    return str(os.getenv("DEBUG_ERRORS", "")).strip().lower() in {"1", "true", "yes", "y"}
+
+
 def error_envelope(code: str, message: str, detail: Optional[Any] = None) -> dict:
     return {"error": {"code": code, "message": message, "detail": detail}}
 
@@ -45,14 +50,9 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
-        # Keep FastAPI's information but wrap in our envelope
         return JSONResponse(
             status_code=422,
-            content=error_envelope(
-                "VALIDATION_ERROR",
-                "Request validation error",
-                detail=exc.errors(),
-            ),
+            content=error_envelope("VALIDATION_ERROR", "Request validation error", detail=exc.errors()),
         )
 
     @app.exception_handler(ValueError)
@@ -65,6 +65,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
         logger.exception("Unhandled exception", exc_info=exc)
+        if _debug_errors():
+            return JSONResponse(
+                status_code=500,
+                content=error_envelope("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}", None),
+            )
         return JSONResponse(
             status_code=500,
             content=error_envelope("INTERNAL_ERROR", "Internal Server Error", None),

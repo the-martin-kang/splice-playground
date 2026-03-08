@@ -1,3 +1,4 @@
+
 # Developer GUI for splice-playground backend (STEP1~STEP3)
 # - STEP1: list diseases
 # - STEP2: show disease payload (regions + SNV)
@@ -9,15 +10,15 @@
 from __future__ import annotations
 
 import json
-import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import streamlit as st
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+import numpy as np
 
 
 # -------------------------
@@ -70,7 +71,6 @@ def guess_api_prefix(backend_url: str) -> str:
         return "/api"
     if "/diseases" in paths:
         return ""
-    # fallback: if any path starts with /api/
     for p in paths.keys():
         if isinstance(p, str) and p.startswith("/api/"):
             return "/api"
@@ -116,13 +116,115 @@ def normalize_edits_json(text: str) -> List[Dict[str, Any]]:
 
 
 # -------------------------
-# Plotting
+# Plotting (Mission6-style)
 # -------------------------
 
-def plot_splicing_payload(payload: Dict[str, Any], *, title: str = ""):
+def _infer_strand_from_regions(regions: List[Dict[str, Any]]) -> str:
+    # Backend STEP3 response may not include strand. For display only.
+    # Prefer explicit payload['strand'] when available; otherwise default '+'.
+    return "+"
+
+
+def _draw_transcript_track(ax, start_x: int, end_x: int, strand: str):
+    ax.plot([start_x, end_x], [0.5, 0.5], color="black", lw=1.2, zorder=1)
+    span = max(1, end_x - start_x)
+    n_arrows = max(4, min(9, span // 1500))
+    xs = np.linspace(start_x + span * 0.05, end_x - span * 0.05, n_arrows)
+    dx = max(250, int(span * 0.03))
+    for x in xs:
+        if strand == "-":
+            ax.annotate("", xy=(x - dx, 0.5), xytext=(x, 0.5),
+                        arrowprops=dict(arrowstyle="->", lw=1.0, color="black"))
+        else:
+            ax.annotate("", xy=(x + dx, 0.5), xytext=(x, 0.5),
+                        arrowprops=dict(arrowstyle="->", lw=1.0, color="black"))
+
+
+def _draw_exons(ax, regions: List[Dict[str, Any]]):
+    # Mission6-like: show exon boxes only, no overlapping intron labels.
+    for r in regions:
+        if str(r.get("region_type")) != "exon":
+            continue
+        s = int(r["gene_start_idx"])
+        e = int(r["gene_end_idx"])
+        w = max(1, e - s + 1)
+        rect = Rectangle((s, 0.35), w, 0.30, facecolor="0.7", edgecolor="0.2", lw=1.0, zorder=2)
+        ax.add_patch(rect)
+
+
+
+
+def _plot_overlap_spikes(ax, x, y_ref, y_alt, *, ref_color="royalblue", alt_color="lightsalmon", overlap_color="purple", label_ref="Ref", label_alt="Alt", eps=1e-8):
     """
-    Plot acceptor/donor probabilities over the target span, overlay ref vs alt.
-    payload: SplicingPredictionResponse
+    Mission6-style sparse spike plot with explicit purple overlap.
+    For each x:
+      common = min(ref, alt) -> purple
+      extra ref  = ref-common -> blue above common
+      extra alt  = alt-common -> orange above common
+    This avoids one line hiding the other and makes exact overlap visually purple.
+    """
+    x_arr = np.asarray(x)
+    ref = np.asarray(y_ref, dtype=float)
+    alt = np.asarray(y_alt, dtype=float)
+
+    common = np.minimum(ref, alt)
+    mask = (ref > eps) | (alt > eps)
+    if not np.any(mask):
+        # still create legend handles
+        ax.plot([], [], color=ref_color, lw=1.6, label=label_ref)
+        ax.plot([], [], color=alt_color, lw=1.6, label=label_alt)
+        return
+
+    xm = x_arr[mask]
+    refm = ref[mask]
+    altm = alt[mask]
+    commonm = common[mask]
+
+    # overlap first
+    ax.vlines(xm, 0.0, commonm, color=overlap_color, lw=2.0, alpha=0.95, zorder=3)
+
+    # ref-only above overlap
+    ref_extra_mask = refm > commonm + eps
+    if np.any(ref_extra_mask):
+        ax.vlines(
+            xm[ref_extra_mask],
+            commonm[ref_extra_mask],
+            refm[ref_extra_mask],
+            color=ref_color,
+            lw=2.0,
+            alpha=0.95,
+            zorder=4,
+        )
+
+    # alt-only above overlap
+    alt_extra_mask = altm > commonm + eps
+    if np.any(alt_extra_mask):
+        ax.vlines(
+            xm[alt_extra_mask],
+            commonm[alt_extra_mask],
+            altm[alt_extra_mask],
+            color=alt_color,
+            lw=2.0,
+            alpha=0.95,
+            zorder=5,
+        )
+
+    # tiny invisible handles for legend
+    ax.plot([], [], color=ref_color, lw=1.8, label=label_ref)
+    ax.plot([], [], color=alt_color, lw=1.8, label=label_alt)
+
+def plot_splicing_payload(
+    payload: Dict[str, Any],
+    *,
+    title: str = "",
+    subtitle: Optional[str] = None,
+    strand: str = "+",
+):
+    """
+    Plot in mission6 style:
+      - top: exon track only
+      - middle: acceptor (Ref vs Alt)
+      - bottom: donor (Ref vs Alt)
     """
     target_start = int(payload["target_start_gene0"])
     target_end = int(payload["target_end_gene0"])
@@ -132,61 +234,55 @@ def plot_splicing_payload(payload: Dict[str, Any], *, title: str = ""):
     prob_ref = payload["prob_ref"]  # [3][L]
     prob_alt = payload["prob_alt"]  # [3][L]
 
-    # Safety
     if len(prob_ref) != 3 or len(prob_alt) != 3:
         raise ValueError("prob_ref/prob_alt must be [3][L]")
-    if len(prob_ref[0]) != target_len:
-        raise ValueError(f"prob_ref length mismatch: {len(prob_ref[0])} vs target_len={target_len}")
+    if len(prob_ref[0]) != target_len or len(prob_alt[0]) != target_len:
+        raise ValueError("Probability length mismatch vs target_len")
 
     x = list(range(target_start, target_end))
     if len(x) != target_len:
-        # defensive: if end-start differs
         x = list(range(target_len))
 
-    # Prepare figure
-    fig = plt.figure(figsize=(14, 6))
-    gs = fig.add_gridspec(2, 1, height_ratios=[1, 2], hspace=0.1)
-    ax_top = fig.add_subplot(gs[0])
-    ax = fig.add_subplot(gs[1], sharex=ax_top)
-
-    # Region track (exons shaded)
     regions = payload.get("target_regions", [])
-    for r in regions:
-        s = int(r["gene_start_idx"])
-        e = int(r["gene_end_idx"])
-        rtype = str(r["region_type"])
-        label = f'{rtype}{r["region_number"]} (rel={r["rel"]})'
-        ax_top.plot([s, e], [0.5, 0.5], linewidth=6)  # default color cycle
-        ax_top.text((s + e) / 2, 0.65, label, ha="center", va="bottom", fontsize=8, rotation=0)
-        if rtype == "exon":
-            ax.axvspan(s, e, alpha=0.12)
 
-    ax_top.set_ylim(0, 1)
+    fig = plt.figure(figsize=(14, 9))
+    gs = fig.add_gridspec(3, 1, height_ratios=[0.9, 1.2, 1.2], hspace=0.42)
+
+    ax_top = fig.add_subplot(gs[0])
+    ax_acc = fig.add_subplot(gs[1], sharex=ax_top)
+    ax_don = fig.add_subplot(gs[2], sharex=ax_top)
+
+    # --- Top track: mission6-style exon boxes + arrows ---
+    _draw_transcript_track(ax_top, x[0], x[-1], strand)
+    _draw_exons(ax_top, regions)
+    ax_top.set_ylim(0.25, 0.7)
     ax_top.set_yticks([])
-    ax_top.set_ylabel("regions", fontsize=9)
+    ax_top.set_ylabel("Exons")
     ax_top.grid(False)
 
-    # Probabilities
-    # class order: neither, acceptor, donor
+    # --- Middle: acceptor (Ref/Alt overlap shown in purple) ---
     acc_ref = prob_ref[1]
-    don_ref = prob_ref[2]
     acc_alt = prob_alt[1]
+    _plot_overlap_spikes(ax_acc, x, acc_ref, acc_alt, label_ref="Ref", label_alt="Alt")
+    ax_acc.axvline(snv_pos, linestyle="--", linewidth=1.2, color="black", alpha=0.7)
+    ax_acc.set_ylim(0, 1.0)
+    ax_acc.set_ylabel("P(acceptor)")
+    ax_acc.legend(loc="upper right")
+
+    # --- Bottom: donor (Ref/Alt overlap shown in purple) ---
+    don_ref = prob_ref[2]
     don_alt = prob_alt[2]
+    _plot_overlap_spikes(ax_don, x, don_ref, don_alt, label_ref="Ref", label_alt="Alt")
+    ax_don.axvline(snv_pos, linestyle="--", linewidth=1.2, color="black", alpha=0.7)
+    ax_don.set_ylim(0, 1.0)
+    ax_don.set_ylabel("P(donor)")
+    ax_don.set_xlabel("gene0 coordinate")
+    ax_don.legend(loc="upper right")
 
-    ax.plot(x, acc_ref, label="acceptor_ref")
-    ax.plot(x, acc_alt, label="acceptor_alt")
-    ax.plot(x, don_ref, label="donor_ref")
-    ax.plot(x, don_alt, label="donor_alt")
-
-    # SNV line
-    ax.axvline(snv_pos, linestyle="--", linewidth=1)
-
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("P(site)")
-    ax.set_xlabel("gene0 coordinate")
-    ax.legend(loc="upper right", fontsize=8)
     if title:
-        fig.suptitle(title, fontsize=12)
+        fig.suptitle(title, fontsize=13)
+    if subtitle:
+        fig.text(0.08, 0.66, subtitle, fontsize=11)
 
     return fig
 
@@ -332,10 +428,18 @@ resp = st.session_state.get("step3_resp")
 if isinstance(resp, dict) and resp:
     st.json(resp, expanded=False)
 
-    # Plot
     try:
+        # title / subtitle in mission6-style spirit
+        disease_name = None
+        step2p = st.session_state.get("step2_payload") or {}
+        if isinstance(step2p, dict):
+            disease_name = ((step2p.get("disease") or {}).get("disease_name")) or None
+            strand = ((step2p.get("gene") or {}).get("strand")) or "+"
+        else:
+            strand = "+"
+
         title = f'{resp.get("gene_id")} | {resp.get("disease_id")} | {resp.get("model_version")} | radius={resp.get("region_radius")} flank={resp.get("flank")}'
-        fig = plot_splicing_payload(resp, title=title)
+        fig = plot_splicing_payload(resp, title=title, subtitle=disease_name, strand=strand)
         st.pyplot(fig, clear_figure=True)
     except Exception as e:
         st.error(f"Plot error: {e}")

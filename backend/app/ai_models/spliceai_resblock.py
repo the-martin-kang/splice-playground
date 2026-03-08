@@ -9,7 +9,7 @@ import torch.nn as nn
 class ResBlock(nn.Module):
     """Residual block used in our SpliceAI-style ResNet.
 
-    This mirrors the lightweight ResBlock you used in your Mission6/validation code:
+    This mirrors the lightweight ResBlock you used in Mission6/validation:
     - BN -> ReLU -> Conv
     - BN -> ReLU -> Conv
     - residual add
@@ -41,7 +41,7 @@ class ResBlock(nn.Module):
 class SpliceAI(nn.Module):
     """SpliceAI-style model that returns per-base logits for the whole input length.
 
-    Output: (B, 3, L) logits for classes [neither, acceptor, donor] at each position.
+    Output: (B, 3, L) logits for classes [neither, acceptor, donor].
     """
 
     def __init__(self) -> None:
@@ -91,7 +91,6 @@ class SpliceAI(nn.Module):
 
 
 def _looks_like_state_dict(d: Any) -> bool:
-    """Heuristic: a real torch state_dict is a dict[str, Tensor]."""
     if not isinstance(d, dict) or len(d) == 0:
         return False
     for k, v in d.items():
@@ -109,18 +108,11 @@ def _strip_prefix(state: Dict[str, torch.Tensor], prefix: str) -> Dict[str, torc
 
 
 def _extract_state_dict(obj: Any) -> Dict[str, torch.Tensor]:
-    """Handle various checkpoint formats robustly.
-
-    Supported:
-      - state_dict only
-      - dict with: state_dict / model_state_dict / model
-      - DataParallel: keys prefixed with 'module.'
-    """
+    """Handle various checkpoint formats robustly."""
     if isinstance(obj, dict):
         for key in ("state_dict", "model_state_dict", "model"):
             if key in obj and isinstance(obj[key], dict) and _looks_like_state_dict(obj[key]):
                 return obj[key]
-
         if _looks_like_state_dict(obj):
             return obj
 
@@ -129,14 +121,36 @@ def _extract_state_dict(obj: Any) -> Dict[str, torch.Tensor]:
     )
 
 
+def _safe_device(device: Optional[torch.device]) -> torch.device:
+    """Return an available device.
+
+    Prevents common AWS failures when a local .env sets mps.
+    """
+    if device is None:
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            return torch.device("mps")
+        return torch.device("cpu")
+
+    # Validate availability
+    if device.type == "cuda" and not torch.cuda.is_available():
+        return torch.device("cpu")
+    if device.type == "mps":
+        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            return device
+        return torch.device("cpu")
+    return device
+
+
 def load_model(ckpt_path: str, *, device: Optional[torch.device] = None) -> SpliceAI:
     """Load checkpoint into the SpliceAI ResBlock model."""
-    device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = _safe_device(device)
     model = SpliceAI().to(device)
+
     ckpt = torch.load(ckpt_path, map_location=device)
     state = _extract_state_dict(ckpt)
 
-    # Try strict load; if it fails, strip common prefixes and retry
     try:
         model.load_state_dict(state, strict=True)
     except RuntimeError:

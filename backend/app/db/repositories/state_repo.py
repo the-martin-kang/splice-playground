@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
@@ -26,7 +27,6 @@ def create_state(
         res = sb.table("user_state").insert(payload).execute()
     except Exception as e:
         msg = str(e)
-        # Backward compatibility: if the deployed table does not have gene_id, retry without it.
         if gene_id is not None and ("gene_id" in msg and ("column" in msg or "schema cache" in msg or "record" in msg)):
             payload.pop("gene_id", None)
             res = sb.table("user_state").insert(payload).execute()

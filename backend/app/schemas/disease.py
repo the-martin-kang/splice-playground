@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from typing import List, Optional
@@ -19,6 +20,12 @@ class DiseasePublic(BaseModel):
     image_url: Optional[str] = None
     image_expires_in: Optional[int] = None
 
+    # service gating / metadata
+    is_visible_in_service: Optional[bool] = None
+    max_supported_step: Optional[int] = None
+    seed_mode: Optional[str] = None
+    note: Optional[str] = None
+
 
 class DiseaseListResponse(BaseModel):
     items: List[DiseasePublic]
@@ -33,6 +40,7 @@ class SpliceAlteringSNV(BaseModel):
     coordinate: Coordinate
     note: Optional[str] = None
     is_representative: Optional[bool] = None
+    allele_coordinate_system: Optional[str] = None
 
 
 class TargetWindow(BaseModel):
@@ -51,7 +59,6 @@ class Step2Target(BaseModel):
 
 
 class Step2PayloadResponse(BaseModel):
-    """STEP2-1 응답 전체 payload"""
     disease: DiseasePublic
     gene: Gene
     splice_altering_snv: SpliceAlteringSNV

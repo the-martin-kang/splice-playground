@@ -1,12 +1,13 @@
+
 from __future__ import annotations
 
 from typing import Dict, List, Optional
 
 from fastapi import HTTPException
 
-from app.db.repositories import disease_repo, gene_repo, region_repo, state_repo
-from app.schemas.state import AppliedEdit, CreateStateRequest, Edit, StatePublic
-
+from app.db.repositories import disease_repo, gene_repo, region_repo, state_repo, snv_repo
+from app.schemas.state import AppliedEdit, CreateStateRequest, StatePublic
+from app.services.snv_alleles import to_gene_direction_alleles
 
 _ALLOWED = {"A", "C", "G", "T", "N"}
 
@@ -14,43 +15,10 @@ _ALLOWED = {"A", "C", "G", "T", "N"}
 def _normalize_applied_edit(applied: Optional[AppliedEdit]) -> dict:
     if applied is None:
         return {"type": "user", "edits": []}
-
     edits = []
     for e in applied.edits:
         edits.append({"pos": int(e.pos_gene0), "from": e.from_base.upper(), "to": e.to_base.upper()})
     return {"type": applied.type, "edits": edits}
-
-
-def _get_representative_snv_from_disease_id_or_db(disease_id: str) -> Optional[dict]:
-    # Try DB first via supabase client indirectly not to add more repository files.
-    try:
-        from app.db.supabase_client import get_supabase_client
-        sb = get_supabase_client()
-        res = (
-            sb.table("splice_altering_snv")
-            .select("*")
-            .eq("disease_id", disease_id)
-            .eq("is_representative", True)
-            .limit(1)
-            .execute()
-        )
-        data = res.data if hasattr(res, "data") else res.get("data")
-        if data:
-            if isinstance(data, list):
-                return data[0] if data else None
-            return data
-    except Exception:
-        pass
-
-    # Fallback: parse disease_id like BRCA1_gene0_106454_G>A
-    try:
-        gene, tag, pos, change = disease_id.split("_", 3)
-        if tag != "gene0":
-            return None
-        ref, alt = change.split(">", 1)
-        return {"gene_id": gene, "pos_gene0": int(pos), "ref": ref, "alt": alt, "is_representative": True}
-    except Exception:
-        return None
 
 
 def _build_gene_sequence(gene_len: int, regions: List[dict]) -> str:
@@ -61,7 +29,6 @@ def _build_gene_sequence(gene_len: int, regions: List[dict]) -> str:
         seq = (r.get("sequence") or "").upper()
         if not seq:
             continue
-        # region_end is inclusive in DB
         expected = e - s + 1
         if expected != len(seq):
             m = min(expected, len(seq))
@@ -107,24 +74,23 @@ def _load_parent_chain_edits(parent_state_id: Optional[str], disease_id: str) ->
             raise HTTPException(status_code=400, detail="parent_state_id belongs to a different disease")
         chain.append(row)
         cur = row.get("parent_state_id")
-    # oldest parent first
     for row in reversed(chain):
         out.extend(_parse_stored_edits(row.get("applied_edit")))
     return out
 
 
-def _current_sequence_for_edits(disease_id: str, gene_id: str, gene_len: int, parent_state_id: Optional[str]) -> List[str]:
+def _current_sequence_for_edits(disease_id: str, disease_row: dict, gene_id: str, gene_strand: str, gene_len: int, parent_state_id: Optional[str]) -> List[str]:
     regions = region_repo.list_regions_by_gene(gene_id, include_sequence=True)
     seq = list(_build_gene_sequence(gene_len, regions))
 
-    # The UI edits the disease sequence, so representative disease SNV is already present.
-    rep = _get_representative_snv_from_disease_id_or_db(disease_id)
-    if rep is not None:
+    seed_mode = str(disease_row.get("seed_mode") or "apply_alt")
+    rep = snv_repo.get_representative_snv(disease_id)
+    if rep is not None and seed_mode != "reference_is_current":
         pos = int(rep["pos_gene0"])
         if 0 <= pos < len(seq):
-            seq[pos] = str(rep["alt"]).upper()
+            _, alt_gene = to_gene_direction_alleles(rep, gene_strand)
+            seq[pos] = alt_gene
 
-    # Apply parent state edits on top.
     for e in _load_parent_chain_edits(parent_state_id, disease_id):
         pos = e["pos"]
         if 0 <= pos < len(seq):
@@ -132,10 +98,9 @@ def _current_sequence_for_edits(disease_id: str, gene_id: str, gene_len: int, pa
     return seq
 
 
-def _validate_request_edits(req: CreateStateRequest, *, disease_id: str, gene_id: str, gene_len: int) -> dict:
+def _validate_request_edits(req: CreateStateRequest, *, disease_id: str, disease_row: dict, gene_id: str, gene_strand: str, gene_len: int) -> dict:
     applied = _normalize_applied_edit(req.applied_edit)
-    current_seq = _current_sequence_for_edits(disease_id, gene_id, gene_len, req.parent_state_id)
-
+    current_seq = _current_sequence_for_edits(disease_id, disease_row, gene_id, gene_strand, gene_len, req.parent_state_id)
     seen_pos = set()
     cleaned = []
     for raw in applied["edits"]:
@@ -162,12 +127,11 @@ def _validate_request_edits(req: CreateStateRequest, *, disease_id: str, gene_id
                     "provided_from": fb,
                     "provided_to": tb,
                     "disease_id": disease_id,
-                    "hint": "The editor works on the disease sequence (representative SNV already applied), not the raw reference sequence.",
+                    "hint": "The editor works on the disease sequence already transformed to gene direction; representative SNV may already be applied depending on seed_mode.",
                 },
             )
         cleaned.append({"pos": pos, "from": fb, "to": tb})
         current_seq[pos] = tb
-
     return {"type": applied["type"], "edits": cleaned}
 
 
@@ -185,8 +149,9 @@ def create_state_for_disease(disease_id: str, req: CreateStateRequest) -> StateP
     gene_len = int(g.get("length") or 0)
     if gene_len <= 0:
         raise HTTPException(status_code=500, detail=f"invalid gene.length for {gene_id}")
+    gene_strand = str(g.get("strand") or "+")
 
-    applied = _validate_request_edits(req, disease_id=disease_id, gene_id=gene_id, gene_len=gene_len)
+    applied = _validate_request_edits(req, disease_id=disease_id, disease_row=d, gene_id=gene_id, gene_strand=gene_strand, gene_len=gene_len)
     row = state_repo.create_state(disease_id, gene_id=gene_id, applied_edit=applied, parent_state_id=req.parent_state_id)
 
     return StatePublic(
@@ -202,7 +167,6 @@ def get_state_public(state_id: str) -> StatePublic:
     row = state_repo.get_state(state_id)
     if not row:
         raise HTTPException(status_code=404, detail=f"state not found: {state_id}")
-
     applied = row.get("applied_edit") or {"type": "user", "edits": []}
     return StatePublic(
         state_id=str(row.get("state_id")),
