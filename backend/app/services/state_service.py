@@ -1,12 +1,13 @@
-
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import HTTPException
 
 from app.db.repositories import disease_repo, gene_repo, region_repo, state_repo, snv_repo
 from app.schemas.state import AppliedEdit, CreateStateRequest, StatePublic
+from app.services.gene_context import build_gene_sequence, resolve_single_gene_id_for_disease
+from app.services.state_lineage import load_parent_chain_edits
 from app.services.snv_alleles import to_gene_direction_alleles
 
 _ALLOWED = {"A", "C", "G", "T", "N"}
@@ -21,67 +22,16 @@ def _normalize_applied_edit(applied: Optional[AppliedEdit]) -> dict:
     return {"type": applied.type, "edits": edits}
 
 
-def _build_gene_sequence(gene_len: int, regions: List[dict]) -> str:
-    arr = ["N"] * int(gene_len)
-    for r in regions:
-        s = int(r.get("gene_start_idx", 0))
-        e = int(r.get("gene_end_idx", 0))
-        seq = (r.get("sequence") or "").upper()
-        if not seq:
-            continue
-        expected = e - s + 1
-        if expected != len(seq):
-            m = min(expected, len(seq))
-            seq = seq[:m]
-            e = s + m - 1
-        if s < 0 or e >= gene_len or s > e:
-            continue
-        arr[s:e+1] = list(seq)
-    return "".join(arr)
-
-
-def _parse_stored_edits(applied_edit_obj) -> List[dict]:
-    if not applied_edit_obj:
-        return []
-    edits = applied_edit_obj.get("edits") if isinstance(applied_edit_obj, dict) else None
-    if not isinstance(edits, list):
-        return []
-    out = []
-    for it in edits:
-        try:
-            pos = int(it.get("pos"))
-            fb = str(it.get("from")).upper()
-            tb = str(it.get("to")).upper()
-            out.append({"pos": pos, "from": fb, "to": tb})
-        except Exception:
-            continue
-    return out
-
-
-def _load_parent_chain_edits(parent_state_id: Optional[str], disease_id: str) -> List[dict]:
-    out: List[dict] = []
-    seen = set()
-    cur = parent_state_id
-    chain = []
-    while cur:
-        if cur in seen:
-            raise HTTPException(status_code=400, detail="parent_state_id cycle detected")
-        seen.add(cur)
-        row = state_repo.get_state(cur)
-        if not row:
-            raise HTTPException(status_code=404, detail=f"parent_state_id not found: {cur}")
-        if str(row.get("disease_id")) != disease_id:
-            raise HTTPException(status_code=400, detail="parent_state_id belongs to a different disease")
-        chain.append(row)
-        cur = row.get("parent_state_id")
-    for row in reversed(chain):
-        out.extend(_parse_stored_edits(row.get("applied_edit")))
-    return out
-
-
-def _current_sequence_for_edits(disease_id: str, disease_row: dict, gene_id: str, gene_strand: str, gene_len: int, parent_state_id: Optional[str]) -> List[str]:
+def _current_sequence_for_edits(
+    disease_id: str,
+    disease_row: dict,
+    gene_id: str,
+    gene_strand: str,
+    gene_len: int,
+    parent_state_id: Optional[str],
+) -> List[str]:
     regions = region_repo.list_regions_by_gene(gene_id, include_sequence=True)
-    seq = list(_build_gene_sequence(gene_len, regions))
+    seq = list(build_gene_sequence(gene_len, regions))
 
     seed_mode = str(disease_row.get("seed_mode") or "apply_alt")
     rep = snv_repo.get_representative_snv(disease_id)
@@ -91,22 +41,32 @@ def _current_sequence_for_edits(disease_id: str, disease_row: dict, gene_id: str
             _, alt_gene = to_gene_direction_alleles(rep, gene_strand)
             seq[pos] = alt_gene
 
-    for e in _load_parent_chain_edits(parent_state_id, disease_id):
+    for e in load_parent_chain_edits(parent_state_id, disease_id=disease_id):
         pos = e["pos"]
         if 0 <= pos < len(seq):
             seq[pos] = e["to"]
     return seq
 
 
-def _validate_request_edits(req: CreateStateRequest, *, disease_id: str, disease_row: dict, gene_id: str, gene_strand: str, gene_len: int) -> dict:
+def _validate_request_edits(
+    req: CreateStateRequest,
+    *,
+    disease_id: str,
+    disease_row: dict,
+    gene_id: str,
+    gene_strand: str,
+    gene_len: int,
+) -> dict:
     applied = _normalize_applied_edit(req.applied_edit)
     current_seq = _current_sequence_for_edits(disease_id, disease_row, gene_id, gene_strand, gene_len, req.parent_state_id)
+
     seen_pos = set()
     cleaned = []
     for raw in applied["edits"]:
         pos = int(raw["pos"])
         fb = str(raw["from"]).upper()
         tb = str(raw["to"]).upper()
+
         if pos < 0 or pos >= gene_len:
             raise HTTPException(status_code=400, detail=f"Edit pos out of range: {pos} (gene_length={gene_len})")
         if fb not in _ALLOWED or tb not in _ALLOWED:
@@ -116,6 +76,7 @@ def _validate_request_edits(req: CreateStateRequest, *, disease_id: str, disease
         if pos in seen_pos:
             raise HTTPException(status_code=400, detail=f"Duplicate edit position: {pos}")
         seen_pos.add(pos)
+
         cur = current_seq[pos].upper()
         if cur != fb:
             raise HTTPException(
@@ -127,31 +88,42 @@ def _validate_request_edits(req: CreateStateRequest, *, disease_id: str, disease
                     "provided_from": fb,
                     "provided_to": tb,
                     "disease_id": disease_id,
-                    "hint": "The editor works on the disease sequence already transformed to gene direction; representative SNV may already be applied depending on seed_mode.",
+                    "hint": "The editor works on the disease sequence already transformed to gene direction; representative SNV may already be applied depending on seed_mode and parent_state_id lineage.",
                 },
             )
+
         cleaned.append({"pos": pos, "from": fb, "to": tb})
         current_seq[pos] = tb
     return {"type": applied["type"], "edits": cleaned}
 
 
 def create_state_for_disease(disease_id: str, req: CreateStateRequest) -> StatePublic:
-    d = disease_repo.get_disease(disease_id)
-    if not d:
+    disease = disease_repo.get_disease(disease_id)
+    if not disease:
         raise HTTPException(status_code=404, detail=f"disease not found: {disease_id}")
 
-    gene_id = str(d.get("gene_id") or "")
-    if not gene_id:
-        raise HTTPException(status_code=500, detail="disease.gene_id is missing")
-    g = gene_repo.get_gene(gene_id)
-    if not g:
+    try:
+        gene_id = resolve_single_gene_id_for_disease(disease_id, disease)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    gene = gene_repo.get_gene(gene_id)
+    if not gene:
         raise HTTPException(status_code=404, detail=f"gene not found: {gene_id}")
-    gene_len = int(g.get("length") or 0)
+
+    gene_len = int(gene.get("length") or 0)
     if gene_len <= 0:
         raise HTTPException(status_code=500, detail=f"invalid gene.length for {gene_id}")
-    gene_strand = str(g.get("strand") or "+")
+    gene_strand = str(gene.get("strand") or "+")
 
-    applied = _validate_request_edits(req, disease_id=disease_id, disease_row=d, gene_id=gene_id, gene_strand=gene_strand, gene_len=gene_len)
+    applied = _validate_request_edits(
+        req,
+        disease_id=disease_id,
+        disease_row=disease,
+        gene_id=gene_id,
+        gene_strand=gene_strand,
+        gene_len=gene_len,
+    )
     row = state_repo.create_state(disease_id, gene_id=gene_id, applied_edit=applied, parent_state_id=req.parent_state_id)
 
     return StatePublic(

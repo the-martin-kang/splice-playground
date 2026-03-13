@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 
 from app.schemas.splicing import PredictSplicingRequest, SplicingPredictionResponse
 from app.services.splicing_service import predict_splicing_for_state
@@ -21,7 +21,7 @@ def _debug_errors() -> bool:
 @router.post("/{state_id}/splicing", response_model=SplicingPredictionResponse)
 def predict_splicing_for_state_id(
     state_id: str,
-    req: PredictSplicingRequest = PredictSplicingRequest(),
+    req: PredictSplicingRequest = Body(default_factory=PredictSplicingRequest),
 ) -> SplicingPredictionResponse:
     """STEP3: state-based splicing prediction.
 
@@ -32,6 +32,9 @@ def predict_splicing_for_state_id(
 
     try:
         return predict_splicing_for_state(state_id, req)
+
+    except HTTPException:
+        raise
 
     except ValueError as e:
         # user input / known validation errors

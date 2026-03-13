@@ -17,41 +17,9 @@ from app.schemas.disease import (
 )
 from app.schemas.gene import Gene
 from app.schemas.region import RegionBase, RegionContext
+from app.services.gene_context import build_gene_sequence, find_focus_region, pick_regions_with_shift, resolve_single_gene_id_for_disease
 from app.services.storage_service import create_signed_url
 from app.services.snv_alleles import complement_base
-
-
-def _get_single_gene_id_for_disease(disease_id: str, disease_row: Dict[str, Any]) -> str:
-    gid = disease_row.get("gene_id")
-    if gid:
-        return str(gid)
-    gids = disease_repo.get_gene_ids_for_disease(disease_id)
-    if len(gids) == 1:
-        return gids[0]
-    if not gids:
-        raise ValueError(f"No gene_id for disease_id={disease_id}")
-    raise ValueError(f"Multiple gene_ids for disease_id={disease_id}: {gids}")
-
-
-def _find_focus_region_index(regions: List[Dict[str, Any]], pos_gene0: int) -> int:
-    for i, r in enumerate(regions):
-        s = int(r["gene_start_idx"])
-        e = int(r["gene_end_idx"])
-        if s <= pos_gene0 <= e:
-            return i
-    raise ValueError(f"SNV pos_gene0={pos_gene0} not covered by any region")
-
-
-def _pick_regions_with_shift(regions: List[Dict[str, Any]], focus_idx: int, radius: int) -> Tuple[List[Dict[str, Any]], int]:
-    k = int(2 * radius + 1)
-    if k <= 0:
-        return [regions[focus_idx]], focus_idx
-    if len(regions) <= k:
-        return regions, 0
-    start = max(0, focus_idx - radius)
-    if start + k > len(regions):
-        start = max(0, len(regions) - k)
-    return regions[start : start + k], start
 
 
 def _to_gene_model(row: Dict[str, Any]) -> Gene:
@@ -134,7 +102,7 @@ def get_step2_payload(disease_id: str, *, include_sequence: bool = True) -> Step
     if not drow:
         raise HTTPException(status_code=404, detail=f"disease not found: {disease_id}")
 
-    gid = _get_single_gene_id_for_disease(disease_id, drow)
+    gid = resolve_single_gene_id_for_disease(disease_id, drow)
     grow = gene_repo.get_gene(gid)
     if not grow:
         raise HTTPException(status_code=404, detail=f"gene not found: {gid}")
@@ -147,9 +115,8 @@ def get_step2_payload(disease_id: str, *, include_sequence: bool = True) -> Step
     if not regions:
         raise HTTPException(status_code=404, detail=f"no regions for gene_id={gid}")
 
-    focus_idx = _find_focus_region_index(regions, int(snv["pos_gene0"]))
-    focus_row = regions[focus_idx]
-    context_rows, start_idx = _pick_regions_with_shift(regions, focus_idx, radius=2)
+    focus_idx, focus_row = find_focus_region(regions, int(snv["pos_gene0"]))
+    context_rows, start_idx = pick_regions_with_shift(regions, focus_idx, radius=2)
 
     wrow = window_repo.get_target_window(disease_id)
     if wrow:
@@ -212,33 +179,6 @@ def _normalize_alleles_to_seq(base_at_pos: str, ref: str, alt: str) -> Tuple[str
     return ref_u, alt_u, False
 
 
-def _build_gene_sequence(gene_len: int, regions: List[Dict[str, Any]]) -> str:
-    seq = ["N"] * int(gene_len)
-    for r in regions:
-        rseq = r.get("sequence")
-        if not isinstance(rseq, str) or not rseq:
-            continue
-        s = int(r["gene_start_idx"])
-        e = int(r["gene_end_idx"])
-        if e < s:
-            continue
-        expected = e - s + 1
-        if len(rseq) != expected:
-            m = min(expected, len(rseq))
-            rseq = rseq[:m]
-            e = s + m - 1
-        s2 = max(0, s)
-        e2 = min(int(gene_len) - 1, e)
-        if e2 < s2:
-            continue
-        offset = s2 - s
-        chunk = rseq[offset : offset + (e2 - s2 + 1)]
-        if not chunk:
-            continue
-        seq[s2:e2+1] = list(chunk)
-    return "".join(seq)
-
-
 def get_region_detail(
     disease_id: str,
     region_type: str,
@@ -249,7 +189,7 @@ def get_region_detail(
     drow = disease_repo.get_disease(disease_id)
     if not drow:
         raise HTTPException(status_code=404, detail=f"disease not found: {disease_id}")
-    gid = _get_single_gene_id_for_disease(disease_id, drow)
+    gid = resolve_single_gene_id_for_disease(disease_id, drow)
     row = region_repo.get_region_by_type_number(gid, region_type, int(region_number), include_sequence=include_sequence)
     if not row:
         raise HTTPException(status_code=404, detail=f"region not found: gene_id={gid} {region_type}{region_number}")
@@ -260,7 +200,7 @@ def get_window_payload(disease_id: str, *, window_size: int = 4000) -> Dict[str,
     drow = disease_repo.get_disease(disease_id)
     if not drow:
         raise HTTPException(status_code=404, detail=f"disease not found: {disease_id}")
-    gid = _get_single_gene_id_for_disease(disease_id, drow)
+    gid = resolve_single_gene_id_for_disease(disease_id, drow)
     grow = gene_repo.get_gene(gid)
     if not grow:
         raise HTTPException(status_code=404, detail=f"gene not found: {gid}")
@@ -277,7 +217,7 @@ def get_window_payload(disease_id: str, *, window_size: int = 4000) -> Dict[str,
     alt = str(snv["alt"])
 
     regions = region_repo.list_regions_by_gene(gid, include_sequence=True)
-    gene_seq = _build_gene_sequence(gene_len, regions)
+    gene_seq = build_gene_sequence(gene_len, regions)
 
     ws = int(window_size)
     if ws <= 0:

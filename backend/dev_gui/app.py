@@ -312,6 +312,7 @@ with st.sidebar:
     region_radius = st.number_input("region_radius (3 => 7 regions)", min_value=0, max_value=10, value=3, step=1)
     flank = st.number_input("flank (nt each side)", min_value=0, max_value=20000, value=5000, step=500)
     include_disease_snv = st.checkbox("include_disease_snv", value=True)
+    include_parent_chain = st.checkbox("include_parent_chain", value=True)
     strict_ref_check = st.checkbox("strict_ref_check", value=True)
     return_target_sequence = st.checkbox("return_target_sequence", value=False)
 
@@ -416,6 +417,7 @@ else:
                 "region_radius": int(region_radius),
                 "flank": int(flank),
                 "include_disease_snv": bool(include_disease_snv),
+                "include_parent_chain": bool(include_parent_chain),
                 "strict_ref_check": bool(strict_ref_check),
                 "return_target_sequence": bool(return_target_sequence),
             }
@@ -427,6 +429,53 @@ else:
 resp = st.session_state.get("step3_resp")
 if isinstance(resp, dict) and resp:
     st.json(resp, expanded=False)
+
+    delta_summary = resp.get("delta_summary") or {}
+    warnings = resp.get("warnings") or []
+    state_lineage = resp.get("state_lineage") or []
+    effective_edits = resp.get("effective_edits") or []
+    frontend_summary = resp.get("frontend_summary") or {}
+    interpreted_events = resp.get("interpreted_events") or []
+    canonical_sites = resp.get("canonical_sites") or []
+    novel_sites = resp.get("novel_sites") or []
+    logic_thresholds = resp.get("logic_thresholds") or {}
+
+    meta_col1, meta_col2 = st.columns(2)
+    with meta_col1:
+        if frontend_summary:
+            st.markdown("**Frontend summary**")
+            st.success(frontend_summary.get("headline") or "")
+            st.caption(
+                f"primary={frontend_summary.get('primary_event_type')} / "
+                f"subtype={frontend_summary.get('primary_subtype')} / "
+                f"confidence={frontend_summary.get('confidence')}"
+            )
+        if interpreted_events:
+            st.markdown("**Interpreted events**")
+            st.json(interpreted_events, expanded=False)
+        if delta_summary:
+            st.markdown("**Delta summary**")
+            st.json(delta_summary, expanded=False)
+        if warnings:
+            st.markdown("**Warnings**")
+            for w in warnings:
+                st.warning(w)
+    with meta_col2:
+        if state_lineage:
+            st.markdown("**State lineage**")
+            st.write(" → ".join(state_lineage))
+        if effective_edits:
+            st.markdown("**Effective edits**")
+            st.json(effective_edits, expanded=False)
+        if logic_thresholds:
+            st.markdown("**Logic thresholds**")
+            st.json(logic_thresholds, expanded=False)
+        if canonical_sites:
+            st.markdown("**Canonical sites**")
+            st.json(canonical_sites, expanded=False)
+        if novel_sites:
+            st.markdown("**Novel sites**")
+            st.json(novel_sites, expanded=False)
 
     try:
         # title / subtitle in mission6-style spirit
