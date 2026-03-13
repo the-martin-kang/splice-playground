@@ -44,3 +44,4 @@ app/**/.env.*
 scr/
 validation_pkg/
 dev_gui/
+scripts/
