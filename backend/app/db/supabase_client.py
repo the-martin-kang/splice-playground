@@ -2,8 +2,15 @@ from __future__ import annotations
 
 import logging
 from functools import lru_cache
+from typing import Any
 
-from supabase import Client, create_client  # type: ignore
+try:
+    from supabase import Client, create_client  # type: ignore
+except Exception:  # pragma: no cover - import shape differs across versions
+    from supabase import create_client  # type: ignore
+
+    class Client:  # type: ignore[override]
+        pass
 
 from app.core.config import get_settings
 
@@ -19,7 +26,7 @@ def get_supabase_client() -> Client:
         raise RuntimeError(
             "Supabase env vars missing. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (recommended) or SUPABASE_ANON_KEY."
         )
-    return create_client(url, key)
+    return create_client(url, key)  # type: ignore[return-value]
 
 
 # Backward-compatible alias (some modules used get_supabase())

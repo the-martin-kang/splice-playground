@@ -1,0 +1,15 @@
+[Unit]
+Description=splice-playground FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/splice-playground/backend
+EnvironmentFile=/home/ubuntu/splice-playground/backend/.env.backend
+ExecStart=/home/ubuntu/.local/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

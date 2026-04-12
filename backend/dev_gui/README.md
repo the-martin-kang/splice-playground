@@ -1,24 +1,28 @@
-# splice-playground dev GUI (STEP1~STEP3)
+# splice-playground dev GUI
 
-This Streamlit UI is for development/testing only.
+This folder is now a **separate uv project**.
 
-## Run (minimal deps via uvx)
-From backend root:
+Why:
+- the root backend project depends on `pandas>=3.0.0`
+- modern Streamlit releases that support Altair 6 still require `pandas<3`
+- installing Streamlit into the root backend environment makes dependency resolution impossible
+
+## Run the backend env
 
 ```bash
-uvx --with matplotlib streamlit run dev_gui/app.py
+cd backend
+uv sync
 ```
 
-If you prefer using project uv env:
+## Run the dev GUI env
+
 ```bash
-uv add streamlit matplotlib
-uv run streamlit run dev_gui/app.py
+cd backend/dev_gui
+uv sync
+uv run streamlit run app.py
 ```
 
-## What it does
-- STEP1: GET /api/diseases
-- STEP2: GET /api/diseases/{disease_id}
-- STEP2-2: POST /api/diseases/{disease_id}/states
-- STEP3: POST /api/states/{state_id}/splicing  (A 방식)
+## Important
 
-The backend must be running and have API_PREFIX=/api (default).
+Do **not** run `uv add streamlit` from the backend root anymore.
+Use the isolated `dev_gui/` project instead.

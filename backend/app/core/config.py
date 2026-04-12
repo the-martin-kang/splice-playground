@@ -33,6 +33,12 @@ def _parse_csv(s: Optional[str]) -> List[str]:
     return out
 
 
+def _parse_bool(s: Optional[str], default: bool = False) -> bool:
+    if s is None:
+        return default
+    return str(s).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     # App
@@ -81,6 +87,14 @@ class Settings:
     NCBI_TOOL: Optional[str] = _env("NCBI_TOOL", "splice-playground")
     NCBI_EMAIL: Optional[str] = _env("NCBI_EMAIL")
     NCBI_API_KEY: Optional[str] = _env("NCBI_API_KEY")
+
+    # STEP4 user-structure jobs
+    STEP4_ENABLE_STRUCTURE_JOBS: bool = _parse_bool(_env("STEP4_ENABLE_STRUCTURE_JOBS", "false"), default=False)
+    COLABFOLD_BATCH_CMD: str = _env("COLABFOLD_BATCH_CMD", "colabfold_batch") or "colabfold_batch"
+    COLABFOLD_EXTRA_ARGS: Optional[str] = _env("COLABFOLD_EXTRA_ARGS")
+    STEP4_JOB_WORKDIR: str = _env("STEP4_JOB_WORKDIR", "/tmp/step4_jobs") or "/tmp/step4_jobs"
+    STEP4_JOB_TIMEOUT_SECONDS: int = int(_env("STEP4_JOB_TIMEOUT_SECONDS", "21600") or "21600")
+    STEP4_ALIGNMENT_BIN: Optional[str] = _env("STEP4_ALIGNMENT_BIN")
 
     def __post_init__(self) -> None:
         origins = _parse_csv(_env("CORS_ORIGINS", ""))

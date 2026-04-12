@@ -23,6 +23,7 @@ CODON_TABLE: Dict[str, str] = {
     "GAT": "D", "GAC": "D", "GAA": "E", "GAG": "E",
     "GGT": "G", "GGC": "G", "GGA": "G", "GGG": "G",
 }
+STOP_CODONS = {"TAA", "TAG", "TGA"}
 
 
 @dataclass(frozen=True)
@@ -40,8 +41,10 @@ class TranslationReport:
     reason: Optional[str] = None
 
 
+
 def normalize_nt(seq: str) -> str:
     return "".join(ch for ch in (seq or "").upper() if not ch.isspace())
+
 
 
 def normalize_aa(seq: str) -> str:
@@ -49,8 +52,10 @@ def normalize_aa(seq: str) -> str:
     return s[:-1] if s.endswith("*") else s
 
 
+
 def sha256_text(text: str) -> str:
     return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
+
 
 
 def translate_cds(cds_seq: str) -> TranslationReport:
@@ -131,6 +136,69 @@ def translate_cds(cds_seq: str) -> TranslationReport:
     )
 
 
+
+def first_stop_codon_end_1(cdna_seq: str, *, start_cdna_1: int) -> Optional[int]:
+    seq = normalize_nt(cdna_seq)
+    if not seq or start_cdna_1 < 1 or start_cdna_1 > len(seq):
+        return None
+    start0 = start_cdna_1 - 1
+    usable_end = len(seq) - ((len(seq) - start0) % 3)
+    for i in range(start0, usable_end, 3):
+        codon = seq[i:i + 3]
+        if codon in STOP_CODONS:
+            return i + 3
+    return None
+
+
+
+def trim_to_complete_codons(cdna_seq: str, *, start_cdna_1: int) -> str:
+    seq = normalize_nt(cdna_seq)
+    if not seq or start_cdna_1 < 1 or start_cdna_1 > len(seq):
+        return ""
+    start0 = start_cdna_1 - 1
+    usable_len = ((len(seq) - start0) // 3) * 3
+    return seq[start0:start0 + usable_len]
+
+
+
+def levenshtein_distance(a: str, b: str) -> int:
+    aa = normalize_aa(a)
+    bb = normalize_aa(b)
+    if aa == bb:
+        return 0
+    if not aa:
+        return len(bb)
+    if not bb:
+        return len(aa)
+    if len(aa) < len(bb):
+        aa, bb = bb, aa
+    previous = list(range(len(bb) + 1))
+    for i, ca in enumerate(aa, start=1):
+        current = [i]
+        for j, cb in enumerate(bb, start=1):
+            ins = current[j - 1] + 1
+            dele = previous[j] + 1
+            sub = previous[j - 1] + (0 if ca == cb else 1)
+            current.append(min(ins, dele, sub))
+        previous = current
+    return previous[-1]
+
+
+
+def normalized_edit_similarity(a: str, b: str) -> float:
+    aa = normalize_aa(a)
+    bb = normalize_aa(b)
+    denom = max(len(aa), len(bb), 1)
+    dist = levenshtein_distance(aa, bb)
+    score = 1.0 - (dist / float(denom))
+    if score < 0.0:
+        return 0.0
+    if score > 1.0:
+        return 1.0
+    return score
+
+
+
 def compare_sequences(expected: str, observed: str) -> Dict[str, object]:
     exp = normalize_aa(expected)
     obs = normalize_aa(observed)
@@ -149,4 +217,6 @@ def compare_sequences(expected: str, observed: str) -> Dict[str, object]:
         "expected_length": len(exp),
         "observed_length": len(obs),
         "first_mismatch_aa_1": first_mismatch,
+        "levenshtein_distance": levenshtein_distance(exp, obs),
+        "normalized_edit_similarity": normalized_edit_similarity(exp, obs),
     }

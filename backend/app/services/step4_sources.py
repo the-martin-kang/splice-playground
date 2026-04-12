@@ -296,24 +296,143 @@ def _extract_xref_primary_id(xref: Dict[str, Any]) -> Optional[str]:
     ])
 
 
-def _parse_xrefs(xrefs: List[Dict[str, Any]]) -> Dict[str, Optional[str]]:
-    out: Dict[str, Optional[str]] = {
-        "uniprot_accession": None,
-        "refseq_transcript_id": None,
-        "refseq_protein_id": None,
-    }
+def _ordered_unique(values: Iterable[Optional[str]]) -> List[str]:
+    out: List[str] = []
+    seen = set()
+    for v in values:
+        if not v:
+            continue
+        s = str(v)
+        if s not in seen:
+            out.append(s)
+            seen.add(s)
+    return out
+
+
+def _refseq_accession_rank(accession: Optional[str]) -> Tuple[int, str]:
+    acc = str(accession or "")
+    if acc.startswith(("NM_", "NP_")):
+        return (0, acc)
+    if acc.startswith(("NR_",)):
+        return (1, acc)
+    if acc.startswith(("XM_", "XP_")):
+        return (2, acc)
+    if acc.startswith(("XR_",)):
+        return (3, acc)
+    return (9, acc)
+
+
+def _parse_xrefs(xrefs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    uniprot_accessions: List[str] = []
+    refseq_transcript_ids: List[str] = []
+    refseq_protein_ids: List[str] = []
+
     for x in xrefs:
         dbname = str(x.get("dbname") or x.get("db_display_name") or x.get("db") or "")
         primary = _extract_xref_primary_id(x)
         if not primary:
             continue
-        if dbname in _XREF_DB_UNIPROT and not out["uniprot_accession"]:
-            out["uniprot_accession"] = primary.split("-")[0]
-        if dbname in _XREF_DB_REFSEQ_RNA and not out["refseq_transcript_id"]:
-            out["refseq_transcript_id"] = primary
-        if dbname in _XREF_DB_REFSEQ_PEPTIDE and not out["refseq_protein_id"]:
-            out["refseq_protein_id"] = primary
-    return out
+        if dbname in _XREF_DB_UNIPROT:
+            uniprot_accessions.append(primary.split("-")[0])
+        if dbname in _XREF_DB_REFSEQ_RNA:
+            refseq_transcript_ids.append(primary)
+        if dbname in _XREF_DB_REFSEQ_PEPTIDE:
+            refseq_protein_ids.append(primary)
+
+    uniprot_accessions = _ordered_unique(uniprot_accessions)
+    refseq_transcript_ids = sorted(_ordered_unique(refseq_transcript_ids), key=_refseq_accession_rank)
+    refseq_protein_ids = sorted(_ordered_unique(refseq_protein_ids), key=_refseq_accession_rank)
+
+    return {
+        "uniprot_accession": uniprot_accessions[0] if uniprot_accessions else None,
+        "uniprot_accessions": uniprot_accessions,
+        "refseq_transcript_id": refseq_transcript_ids[0] if refseq_transcript_ids else None,
+        "refseq_transcript_ids": refseq_transcript_ids,
+        "refseq_protein_id": refseq_protein_ids[0] if refseq_protein_ids else None,
+        "refseq_protein_ids": refseq_protein_ids,
+    }
+
+
+def _choose_cds_cdna_coordinates(
+    *,
+    cdna_seq: str,
+    cds_seq: str,
+    translation_obj: Dict[str, Any],
+) -> Tuple[Optional[int], Optional[int], str]:
+    cdna = normalize_nt(cdna_seq)
+    cds = normalize_nt(cds_seq)
+
+    start_candidates: List[Tuple[str, int]] = []
+    end_candidates: List[Tuple[str, int]] = []
+
+    for key in ("cdna_start", "transcript_start", "start"):
+        val = translation_obj.get(key)
+        if isinstance(val, int):
+            start_candidates.append((key, int(val)))
+
+    for key in ("cdna_end", "transcript_end", "end"):
+        val = translation_obj.get(key)
+        if isinstance(val, int):
+            end_candidates.append((key, int(val)))
+
+    for s_key, start_1 in start_candidates:
+        for e_key, end_1 in end_candidates:
+            if start_1 < 1 or end_1 < start_1 or end_1 > len(cdna):
+                continue
+            if cdna[start_1 - 1:end_1] == cds:
+                return start_1, end_1, f"translation_obj:{s_key}/{e_key}"
+
+    s, e, status = _find_unique_subsequence(cdna, cds)
+    if s is not None and e is not None:
+        return s, e, f"subsequence_search:{status}"
+
+    if start_candidates and end_candidates:
+        return start_candidates[0][1], end_candidates[0][1], "unverified_translation_obj"
+    return None, None, status
+
+
+def _choose_exact_refseq_candidate(
+    *,
+    candidates: Iterable[Optional[str]],
+    db: str,
+    target_seq: str,
+    normalizer,
+    ncbi: Optional[NCBIClient] = None,
+) -> Tuple[Optional[str], Dict[str, Any]]:
+    ordered = sorted(_ordered_unique(candidates), key=_refseq_accession_rank)
+    detail: Dict[str, Any] = {
+        "db": db,
+        "candidate_ids": ordered,
+        "tested": [],
+        "exact_match_found": False,
+    }
+    if not ordered:
+        return None, detail
+
+    client = ncbi or NCBIClient()
+    target = normalizer(target_seq)
+
+    for accession in ordered:
+        try:
+            seq = client.efetch_fasta(db=db, accession=accession)
+            normalized = normalizer(seq)
+            match = normalized == target
+            detail["tested"].append({
+                "accession": accession,
+                "observed_length": len(normalized),
+                "match": match,
+            })
+            if match:
+                detail["exact_match_found"] = True
+                detail["selected_accession"] = accession
+                return accession, detail
+        except Exception as e:
+            detail["tested"].append({
+                "accession": accession,
+                "error": str(e),
+            })
+
+    return None, detail
 
 
 def resolve_transcript_reference_bundle(gene_row: Dict[str, Any]) -> TranscriptReferenceBundle:
@@ -354,20 +473,28 @@ def resolve_transcript_reference_bundle(gene_row: Dict[str, Any]) -> TranscriptR
     protein_xrefs = ensembl.xrefs_id(ensembl_protein_id) if ensembl_protein_id else []
     xref_meta = _parse_xrefs(transcript_xrefs + protein_xrefs)
 
-    cds_start_1 = None
-    cds_end_1 = None
-    for key in ("start", "cdna_start", "transcript_start"):
-        val = translation_obj.get(key)
-        if isinstance(val, int):
-            cds_start_1 = int(val)
-            break
-    for key in ("end", "cdna_end", "transcript_end"):
-        val = translation_obj.get(key)
-        if isinstance(val, int):
-            cds_end_1 = int(val)
-            break
-    if cds_start_1 is None or cds_end_1 is None:
-        cds_start_1, cds_end_1, _ = _find_unique_subsequence(cdna_seq, cds_seq)
+    cds_start_1, cds_end_1, cds_coordinate_source = _choose_cds_cdna_coordinates(
+        cdna_seq=cdna_seq,
+        cds_seq=cds_seq,
+        translation_obj=translation_obj,
+    )
+
+    ncbi = NCBIClient()
+    matched_refseq_transcript_id, refseq_tx_resolution = _choose_exact_refseq_candidate(
+        candidates=xref_meta.get("refseq_transcript_ids") or [],
+        db="nuccore",
+        target_seq=cdna_seq,
+        normalizer=normalize_nt,
+        ncbi=ncbi,
+    )
+    translated = translate_cds(cds_seq)
+    matched_refseq_protein_id, refseq_prot_resolution = _choose_exact_refseq_candidate(
+        candidates=xref_meta.get("refseq_protein_ids") or [],
+        db="protein",
+        target_seq=translated.protein_seq,
+        normalizer=normalize_aa,
+        ncbi=ncbi,
+    )
 
     provenance = {
         "ensembl_lookup_gene_id": ensembl_gene_id,
@@ -379,6 +506,14 @@ def resolve_transcript_reference_bundle(gene_row: Dict[str, Any]) -> TranscriptR
         "canonical_source_from_db": canonical_source,
         "transcript_xref_count": len(transcript_xrefs),
         "protein_xref_count": len(protein_xrefs),
+        "cds_coordinate_source": cds_coordinate_source,
+        "xref_resolution": {
+            "uniprot_accessions": xref_meta.get("uniprot_accessions") or [],
+            "refseq_transcript_candidates": xref_meta.get("refseq_transcript_ids") or [],
+            "refseq_transcript_resolution": refseq_tx_resolution,
+            "refseq_protein_candidates": xref_meta.get("refseq_protein_ids") or [],
+            "refseq_protein_resolution": refseq_prot_resolution,
+        },
     }
 
     return TranscriptReferenceBundle(
@@ -389,8 +524,8 @@ def resolve_transcript_reference_bundle(gene_row: Dict[str, Any]) -> TranscriptR
         ensembl_gene_id=ensembl_gene_id,
         ensembl_transcript_id=ensembl_transcript_id,
         ensembl_protein_id=ensembl_protein_id,
-        refseq_transcript_id=xref_meta.get("refseq_transcript_id"),
-        refseq_protein_id=xref_meta.get("refseq_protein_id"),
+        refseq_transcript_id=matched_refseq_transcript_id,
+        refseq_protein_id=matched_refseq_protein_id,
         uniprot_accession=xref_meta.get("uniprot_accession"),
         cdna_seq=normalize_nt(cdna_seq),
         cds_seq=normalize_nt(cds_seq),
@@ -423,6 +558,9 @@ def build_sequence_validation_report(bundle: TranscriptReferenceBundle) -> Dict[
         "cds_end_cdna_1": bundle.cds_end_cdna_1,
     }
     report["cross_source"]["ensembl_translation_vs_cds_translation"] = compare_sequences(bundle.protein_seq, tr.protein_seq)
+    xref_resolution = ((bundle.provenance or {}).get("xref_resolution") or {})
+    if xref_resolution:
+        report["cross_source"]["xref_resolution"] = xref_resolution
 
     ncbi = NCBIClient()
     if bundle.refseq_protein_id:

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from app.db.repositories import region_repo
 from app.services.protein_translation import compare_sequences, normalize_nt, translate_cds
+from app.services.step4_sources import _find_unique_subsequence
 
 
 
@@ -50,6 +51,11 @@ def validate_db_regions_against_reference(
     s0 = int(cds_start_cdna_1) - 1
     e1 = int(cds_end_cdna_1)
     if s0 < 0 or e1 > len(db_mrna) or s0 >= e1:
+        suggested_start, suggested_end, suggested_reason = _find_unique_subsequence(db_mrna, ref_cds)
+        if suggested_start is not None and suggested_end is not None:
+            report["suggested_cds_start_cdna_1"] = suggested_start
+            report["suggested_cds_end_cdna_1"] = suggested_end
+            report["suggested_coordinate_source"] = suggested_reason
         report["ok"] = False
         report["reason"] = "invalid_cds_coordinates_for_db_mrna"
         return report

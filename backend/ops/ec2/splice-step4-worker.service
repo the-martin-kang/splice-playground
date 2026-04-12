@@ -1,0 +1,15 @@
+[Unit]
+Description=splice-playground STEP4 ColabFold worker
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/splice-playground/backend
+EnvironmentFile=/home/ubuntu/splice-playground/backend/.env.worker
+ExecStart=/home/ubuntu/.local/bin/uv run scripts/run_step4_jobs.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

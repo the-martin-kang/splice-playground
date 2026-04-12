@@ -1,0 +1,16 @@
+- Added `STEP4_ENABLE_STRUCTURE_JOBS` config flag. Default recommendation for the CPU-only `t3.small` API server is `false`.
+- `GET /api/diseases/{disease_id}/step4-baseline` and `GET /api/states/{state_id}/step4-baseline` are now enriched with Mol*-friendly fields:
+  - `default_structure`
+  - `molstar_default`
+  - `capabilities`
+  - normalized `viewer_format`
+- `GET /api/states/{state_id}/step4` now returns frontend-ready normal-track data even when GPU prediction is disabled:
+  - `normal_track.default_structure`
+  - `normal_track.molstar_default`
+  - `capabilities`
+  - `user_track.structure_prediction_enabled`
+  - `user_track.structure_prediction_message`
+- `POST /api/states/{state_id}/step4/jobs` no longer queues dead-end jobs on the CPU-only deployment. It returns `created=false` with a clear message until the GPU worker is enabled.
+- Updated `scripts/step4_smoke_test.py` so baseline-only verification succeeds without a GPU worker.
+- Updated `dev_gui` to display the STEP4 CPU-only state more clearly.
+- Added `ops/ec2/README_T3_BASELINE_ONLY.md` and updated `ops/ec2/env.backend.example` for the `t3.small` deployment.

@@ -82,3 +82,16 @@ def upload_bytes_to_storage(
     except Exception:
         # Some versions prefer raw bytes over BytesIO.
         sb.storage.from_(bucket).upload(object_path, data, file_options=file_options)
+
+
+
+def download_storage_bytes(bucket: str, object_path: str) -> bytes:
+    """Download a storage object by creating a short-lived signed URL and fetching it."""
+    import requests
+
+    url, _ = create_signed_storage_url(bucket, object_path)
+    if not url:
+        raise ValueError("Could not create signed URL for storage download")
+    res = requests.get(url, timeout=60)
+    res.raise_for_status()
+    return res.content
