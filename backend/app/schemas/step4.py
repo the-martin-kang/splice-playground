@@ -164,11 +164,13 @@ class Step4SequenceComparisonPublic(BaseModel):
 
 
 class Step4JobAssetPublic(BaseModel):
-    kind: Literal["structure", "pae", "scores", "other"]
+    kind: Literal["structure", "pae", "scores", "logs", "input", "other"]
     file_format: str
     viewer_format: Optional[str] = None
     bucket: str
     path: str
+    name: Optional[str] = None
+    is_default: bool = False
     signed_url: Optional[str] = None
     signed_url_expires_in: Optional[int] = None
 
@@ -197,6 +199,8 @@ class Step4StructureJobPublic(BaseModel):
     reused_baseline_structure: bool = False
 
     assets: List[Step4JobAssetPublic] = Field(default_factory=list)
+    default_structure_asset: Optional[Step4JobAssetPublic] = None
+    molstar_default: Optional[Step4MolstarTargetPublic] = None
     confidence: Dict[str, Any] = Field(default_factory=dict)
     comparison_to_normal: Dict[str, Any] = Field(default_factory=dict)
     structure_comparison: Optional[Step4StructureComparisonPublic] = None

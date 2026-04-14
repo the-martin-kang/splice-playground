@@ -140,5 +140,8 @@ def post_state_step4_job(
 
 
 @router.get("/step4-jobs/{job_id}", response_model=Step4StructureJobPublic)
-def get_step4_job(job_id: str) -> Step4StructureJobPublic:
-    return get_step4_structure_job(job_id)
+def get_step4_job(
+    job_id: str,
+    include_payload: bool = Query(True, description="Return the persisted job result_payload; set false for lighter summary-only responses."),
+) -> Step4StructureJobPublic:
+    return get_step4_structure_job(job_id, include_payload=include_payload)

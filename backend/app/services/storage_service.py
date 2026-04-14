@@ -4,6 +4,7 @@ import io
 from typing import Optional, Tuple
 
 from app.core.config import get_settings
+from app.db.repositories._helpers import run_with_retry
 from app.db.supabase_client import get_supabase_client
 
 
@@ -31,7 +32,7 @@ def create_signed_storage_url(bucket: str, object_path: Optional[str]) -> Tuple[
 
     sb = get_supabase_client()
     expires = int(get_settings().SIGNED_URL_EXPIRES_IN)
-    res = sb.storage.from_(bucket).create_signed_url(object_path, expires)
+    res = run_with_retry(lambda: sb.storage.from_(bucket).create_signed_url(object_path, expires))
     if isinstance(res, dict):
         url = res.get("signedURL") or res.get("signedUrl") or res.get("signed_url")
     else:
@@ -78,10 +79,10 @@ def upload_bytes_to_storage(
 
     payload = io.BytesIO(data)
     try:
-        sb.storage.from_(bucket).upload(object_path, payload, file_options=file_options)
+        run_with_retry(lambda: sb.storage.from_(bucket).upload(object_path, payload, file_options=file_options))
     except Exception:
         # Some versions prefer raw bytes over BytesIO.
-        sb.storage.from_(bucket).upload(object_path, data, file_options=file_options)
+        run_with_retry(lambda: sb.storage.from_(bucket).upload(object_path, data, file_options=file_options))
 
 
 
@@ -92,6 +93,9 @@ def download_storage_bytes(bucket: str, object_path: str) -> bytes:
     url, _ = create_signed_storage_url(bucket, object_path)
     if not url:
         raise ValueError("Could not create signed URL for storage download")
-    res = requests.get(url, timeout=60)
-    res.raise_for_status()
-    return res.content
+    def _download() -> bytes:
+        res = requests.get(url, timeout=60)
+        res.raise_for_status()
+        return res.content
+
+    return run_with_retry(_download)

@@ -89,7 +89,14 @@ def main() -> int:
         status = str(current.get('status') or 'unknown')
         print(json.dumps({'job_id': job_id, 'status': status}, indent=2))
         if status in {'succeeded', 'failed', 'canceled'}:
-            print(json.dumps(current, indent=2)[:6000])
+            print(json.dumps({
+                'job_id': current.get('job_id'),
+                'status': current.get('status'),
+                'molstar_default': current.get('molstar_default'),
+                'asset_count': len(current.get('assets') or []),
+                'comparison_to_normal': current.get('comparison_to_normal'),
+                'confidence': current.get('confidence'),
+            }, indent=2)[:6000])
             return 0 if status == 'succeeded' else 3
         if time.time() >= deadline:
             print(f'[STEP4 smoke] Timed out waiting for job {job_id}', file=sys.stderr)

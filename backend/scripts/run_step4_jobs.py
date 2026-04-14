@@ -6,9 +6,11 @@ import json
 import os
 import re
 import shlex
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -17,16 +19,22 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.core.config import get_settings
-from app.db.repositories.structure_job_repo import get_job, list_jobs, update_job
+from app.db.repositories.structure_job_repo import claim_job_if_queued, get_job, list_jobs, update_job
 from app.services.storage_service import download_storage_bytes, upload_bytes_to_storage
 
 
 _STRUCTURE_SUFFIXES = {".pdb", ".cif", ".mmcif"}
 _JSON_SUFFIXES = {".json"}
+_TEXT_SUFFIXES = {".txt", ".log", ".fasta", ".fa", ".a3m", ".csv"}
 
 
 def _json(data: Any) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+
+def _worker_token() -> str:
+    return f"{socket.gethostname()}:{os.getpid()}"
 
 
 
@@ -40,12 +48,17 @@ def _load_json(path: Path) -> Optional[Dict[str, Any]]:
 
 def _guess_asset_kind(path: Path) -> str:
     name = path.name.lower()
-    if path.suffix.lower() in _STRUCTURE_SUFFIXES:
+    suffix = path.suffix.lower()
+    if suffix in _STRUCTURE_SUFFIXES:
         return "structure"
-    if path.suffix.lower() in _JSON_SUFFIXES and "pae" in name:
+    if suffix in _JSON_SUFFIXES and "pae" in name:
         return "pae"
-    if path.suffix.lower() in _JSON_SUFFIXES:
+    if suffix in _JSON_SUFFIXES:
         return "scores"
+    if suffix in _TEXT_SUFFIXES and name.startswith("query"):
+        return "input"
+    if suffix in _TEXT_SUFFIXES:
+        return "logs"
     return "other"
 
 
@@ -56,7 +69,7 @@ def _collect_output_files(out_dir: Path) -> List[Path]:
         if not p.is_file():
             continue
         suf = p.suffix.lower()
-        if suf in _STRUCTURE_SUFFIXES or suf in _JSON_SUFFIXES:
+        if suf in _STRUCTURE_SUFFIXES or suf in _JSON_SUFFIXES or suf in _TEXT_SUFFIXES:
             keep.append(p)
     keep.sort()
     return keep
@@ -65,26 +78,27 @@ def _collect_output_files(out_dir: Path) -> List[Path]:
 
 def _extract_confidence(files: Iterable[Path]) -> Dict[str, Any]:
     confidence: Dict[str, Any] = {}
+    ranking_debug: Optional[Dict[str, Any]] = None
     for path in files:
-        if path.name.lower() == "ranking_debug.json":
+        lowered = path.name.lower()
+        if lowered == "ranking_debug.json":
             payload = _load_json(path) or {}
+            ranking_debug = payload
             confidence["ranking_debug"] = payload
-        elif path.suffix.lower() == ".json" and "scores" in path.name.lower():
+        elif path.suffix.lower() == ".json" and "scores" in lowered:
             payload = _load_json(path) or {}
             confidence.setdefault("score_files", []).append({"name": path.name, "payload": payload})
-        elif path.suffix.lower() == ".json" and "pae" in path.name.lower():
+        elif path.suffix.lower() == ".json" and "pae" in lowered:
             payload = _load_json(path)
             if isinstance(payload, dict):
                 confidence.setdefault("pae_files", []).append({"name": path.name, "keys": sorted(payload.keys())[:20]})
-    if isinstance(confidence.get("ranking_debug"), dict):
-        rd = confidence["ranking_debug"]
-        if isinstance(rd.get("plddts"), dict):
-            values = [float(v) for v in rd["plddts"].values() if v is not None]
+    if isinstance(ranking_debug, dict):
+        if isinstance(ranking_debug.get("plddts"), dict):
+            values = [float(v) for v in ranking_debug["plddts"].values() if v is not None]
             if values:
                 confidence["best_plddt"] = max(values)
-        order = rd.get("order")
-        if order is not None:
-            confidence["order"] = order
+        if ranking_debug.get("order") is not None:
+            confidence["order"] = ranking_debug.get("order")
     return confidence
 
 
@@ -141,7 +155,85 @@ def _prepare_baseline_alignment_file(payload: Dict[str, Any], tmpdir: Path) -> O
 
 
 
-def _upload_outputs(*, job_row: Dict[str, Any], out_dir: Path) -> Tuple[List[Dict[str, Any]], Dict[str, Any], Optional[Path]]:
+def _structure_score(path: Path, *, ranking_order: List[str]) -> Tuple[int, int, str]:
+    name = path.name.lower()
+    # Prefer CIF/mmCIF for Mol* first, then PDB.
+    ext_rank = 0 if name.endswith(".cif") or name.endswith(".mmcif") else 1
+    if "rank_001" in name:
+        return (0, ext_rank, name)
+    for idx, token in enumerate(ranking_order):
+        tok = str(token).lower()
+        if tok and tok in name:
+            return (1 + idx, ext_rank, name)
+    return (999, ext_rank, name)
+
+
+
+def _pick_default_structure_file(files: Iterable[Path]) -> Optional[Path]:
+    files = list(files)
+    structure_files = [p for p in files if p.suffix.lower() in _STRUCTURE_SUFFIXES]
+    if not structure_files:
+        return None
+    ranking_order: List[str] = []
+    ranking_debug = next((p for p in files if p.name.lower() == "ranking_debug.json"), None)
+    if ranking_debug is not None:
+        payload = _load_json(ranking_debug) or {}
+        order = payload.get("order")
+        if isinstance(order, list):
+            ranking_order = [str(x) for x in order]
+    scored = sorted(structure_files, key=lambda p: _structure_score(p, ranking_order=ranking_order))
+    return scored[0]
+
+
+
+def _should_upload_output(path: Path, *, default_structure: Optional[Path], artifact_policy: str) -> bool:
+    policy = (artifact_policy or "minimal").strip().lower()
+    if policy == "full":
+        return True
+
+    name = path.name.lower()
+    if default_structure is not None and path.resolve() == default_structure.resolve():
+        return True
+    if name == "ranking_debug.json":
+        return True
+    if name == "config.json":
+        return True
+    if "predicted_aligned_error" in name or "pae" in name:
+        return True
+    if name.endswith('.done.txt'):
+        return True
+    return False
+
+
+def _compact_result_payload(payload: Dict[str, Any], *, assets: List[Dict[str, Any]], confidence: Dict[str, Any], worker_token: str, command: List[str], default_structure: Path) -> Dict[str, Any]:
+    compact: Dict[str, Any] = {
+        "gene_id": payload.get("gene_id"),
+        "disease_id": payload.get("disease_id"),
+        "state_id": payload.get("state_id"),
+        "user_protein_sha256": payload.get("user_protein_sha256"),
+        "user_protein_length": payload.get("user_protein_length"),
+        "reused_baseline_structure": False,
+        "comparison_to_normal": payload.get("comparison_to_normal") or {},
+        "translation_sanity": payload.get("translation_sanity") or {},
+        "predicted_transcript": payload.get("predicted_transcript") or {},
+        "baseline_protein_reference_id": payload.get("baseline_protein_reference_id"),
+        "baseline_default_structure_asset_id": payload.get("baseline_default_structure_asset_id"),
+        "assets": assets,
+        "confidence": confidence,
+        "default_structure_name": default_structure.name,
+        "worker": {
+            "token": worker_token,
+            "hostname": socket.gethostname(),
+            "pid": os.getpid(),
+            "command": command,
+        },
+    }
+    if payload.get("structure_comparison") is not None:
+        compact["structure_comparison"] = payload.get("structure_comparison")
+    return compact
+
+
+def _upload_outputs(*, job_row: Dict[str, Any], workdir: Path, out_dir: Path, stdout_text: str, stderr_text: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any], Optional[Path]]:
     settings = get_settings()
     bucket = settings.STEP4_STRUCTURE_BUCKET
     payload = job_row.get("result_payload") or {}
@@ -150,18 +242,74 @@ def _upload_outputs(*, job_row: Dict[str, Any], out_dir: Path) -> Tuple[List[Dic
     job_id = str(job_row.get("job_id") or "unknown")
     storage_prefix = f"user/{gene_id}/{state_id}/{job_id}"
 
+    # Persist input / logs for reproducibility.
+    input_fasta = workdir / "query.fasta"
+    if input_fasta.exists():
+        upload_bytes_to_storage(
+            bucket=bucket,
+            object_path=f"{storage_prefix}/inputs/{input_fasta.name}",
+            data=input_fasta.read_bytes(),
+            content_type="text/plain",
+            upsert=True,
+        )
+    upload_bytes_to_storage(
+        bucket=bucket,
+        object_path=f"{storage_prefix}/logs/stdout.log",
+        data=stdout_text.encode("utf-8", errors="replace"),
+        content_type="text/plain",
+        upsert=True,
+    )
+    upload_bytes_to_storage(
+        bucket=bucket,
+        object_path=f"{storage_prefix}/logs/stderr.log",
+        data=stderr_text.encode("utf-8", errors="replace"),
+        content_type="text/plain",
+        upsert=True,
+    )
+
     files = _collect_output_files(out_dir)
-    assets: List[Dict[str, Any]] = []
-    first_structure: Optional[Path] = None
+    default_structure = _pick_default_structure_file(files)
+    artifact_policy = str(get_settings().STEP4_ARTIFACT_POLICY or "minimal")
+    files = [f for f in files if _should_upload_output(f, default_structure=default_structure, artifact_policy=artifact_policy)]
+    assets: List[Dict[str, Any]] = [
+        {
+            "kind": "input",
+            "bucket": bucket,
+            "path": f"{storage_prefix}/inputs/query.fasta",
+            "file_format": "fasta",
+            "name": "query.fasta",
+            "is_default": False,
+        },
+        {
+            "kind": "logs",
+            "bucket": bucket,
+            "path": f"{storage_prefix}/logs/stdout.log",
+            "file_format": "log",
+            "name": "stdout.log",
+            "is_default": False,
+        },
+    ]
+    if stderr_text:
+        assets.append(
+            {
+                "kind": "logs",
+                "bucket": bucket,
+                "path": f"{storage_prefix}/logs/stderr.log",
+                "file_format": "log",
+                "name": "stderr.log",
+                "is_default": False,
+            }
+        )
+
     for f in files:
         rel = f.relative_to(out_dir)
-        object_path = f"{storage_prefix}/{rel.as_posix()}"
+        object_path = f"{storage_prefix}/outputs/{rel.as_posix()}"
         kind = _guess_asset_kind(f)
-        if kind == "structure" and first_structure is None:
-            first_structure = f
         content_type = "application/octet-stream"
         if f.suffix.lower() == ".json":
             content_type = "application/json"
+        elif f.suffix.lower() in {".log", ".txt", ".fasta", ".fa", ".csv", ".a3m"}:
+            content_type = "text/plain"
         upload_bytes_to_storage(bucket=bucket, object_path=object_path, data=f.read_bytes(), content_type=content_type, upsert=True)
         assets.append(
             {
@@ -170,14 +318,15 @@ def _upload_outputs(*, job_row: Dict[str, Any], out_dir: Path) -> Tuple[List[Dic
                 "path": object_path,
                 "file_format": f.suffix.lower().lstrip("."),
                 "name": f.name,
+                "is_default": bool(default_structure is not None and f.resolve() == default_structure.resolve()),
             }
         )
     confidence = _extract_confidence(files)
-    return assets, confidence, first_structure
+    return assets, confidence, default_structure
 
 
 
-def _run_colabfold(job_row: Dict[str, Any]) -> Dict[str, Any]:
+def _run_colabfold(job_row: Dict[str, Any], *, worker_token: str) -> Dict[str, Any]:
     settings = get_settings()
     payload = dict(job_row.get("result_payload") or {})
     protein_seq = str(payload.get("user_protein_seq") or "").strip().upper()
@@ -207,35 +356,49 @@ def _run_colabfold(job_row: Dict[str, Any]) -> Dict[str, Any]:
     if proc.returncode != 0:
         raise RuntimeError(f"colabfold_batch failed (exit={proc.returncode})\nSTDOUT:\n{stdout[-4000:]}\nSTDERR:\n{stderr[-4000:]}")
 
-    assets, confidence, first_structure = _upload_outputs(job_row=job_row, out_dir=out_dir)
-    result_payload = dict(payload)
-    result_payload["assets"] = assets
-    result_payload["confidence"] = confidence
-    result_payload["stdout_excerpt"] = stdout[-4000:]
-    result_payload["stderr_excerpt"] = stderr[-4000:] if stderr else ""
+    assets, confidence, default_structure = _upload_outputs(
+        job_row=job_row,
+        workdir=workdir,
+        out_dir=out_dir,
+        stdout_text=stdout,
+        stderr_text=stderr,
+    )
+    if default_structure is None:
+        raise RuntimeError("ColabFold finished but no structure output (.cif/.mmcif/.pdb) was found.")
 
-    if settings.STEP4_ALIGNMENT_BIN and first_structure is not None:
+    structure_comparison = None
+    if settings.STEP4_ALIGNMENT_BIN:
         with tempfile.TemporaryDirectory(prefix="step4_align_") as td:
             tmpdir = Path(td)
             baseline_file = _prepare_baseline_alignment_file(payload, tmpdir)
             if baseline_file is not None:
-                result_payload["structure_comparison"] = _run_alignment(
+                structure_comparison = _run_alignment(
                     alignment_bin=settings.STEP4_ALIGNMENT_BIN,
-                    pred_path=first_structure,
+                    pred_path=default_structure,
                     baseline_path=baseline_file,
                 )
+
+    compact_base = dict(payload)
+    if structure_comparison is not None:
+        compact_base["structure_comparison"] = structure_comparison
+    result_payload = _compact_result_payload(
+        compact_base,
+        assets=assets,
+        confidence=confidence,
+        worker_token=worker_token,
+        command=cmd,
+        default_structure=default_structure,
+    )
     return result_payload
 
 
 
-def _process_job(job_row: Dict[str, Any]) -> Dict[str, Any]:
+def _process_claimed_job(job_row: Dict[str, Any], *, worker_token: str) -> Dict[str, Any]:
     provider = str(job_row.get("provider") or "")
     if provider != "colabfold":
         raise RuntimeError(f"Unsupported provider for worker: {provider}")
-
-    update_job(str(job_row["job_id"]), status="running", error_message=None)
-    result_payload = _run_colabfold(job_row)
-    return update_job(str(job_row["job_id"]), status="succeeded", result_payload=result_payload, error_message=None)
+    result_payload = _run_colabfold(job_row, worker_token=worker_token)
+    return update_job(str(job_row["job_id"]), status="succeeded", result_payload=result_payload, error_message=None, include_payload=False)
 
 
 
@@ -245,8 +408,10 @@ def main() -> None:
     ap.add_argument("--provider", default="colabfold")
     ap.add_argument("--limit", type=int, default=5)
     ap.add_argument("--job-id", help="Run a specific job id instead of polling queued jobs")
+    ap.add_argument("--poll-seconds", type=int, default=get_settings().STEP4_JOB_POLL_SECONDS)
     args = ap.parse_args()
 
+    worker_token = _worker_token()
     processed_any = False
     try:
         while True:
@@ -256,20 +421,30 @@ def main() -> None:
                     raise SystemExit(f"Job not found: {args.job_id}")
                 rows = [row]
             else:
-                rows = list_jobs(status="queued", provider=args.provider, limit=args.limit)
+                rows = list_jobs(status="queued", provider=args.provider, limit=args.limit, include_payload=False)
 
             if not rows:
                 if args.once:
                     break
-                import time
-                time.sleep(5)
+                time.sleep(max(1, args.poll_seconds))
                 continue
 
             for row in rows:
                 job_id = str(row.get("job_id"))
-                print(f"[STEP4 worker] Processing job {job_id} provider={row.get('provider')} state_id={row.get('state_id')}")
+                provider = str(row.get("provider") or "")
+                claimed: Optional[Dict[str, Any]]
+                if str(row.get("status") or "") == "queued":
+                    claimed = claim_job_if_queued(job_id, worker_token=worker_token, provider=provider or None)
+                    if claimed is None:
+                        print(_json({"job_id": job_id, "status": "skipped", "reason": "already claimed by another worker"}))
+                        continue
+                else:
+                    # Explicit --job-id fallback for a row already in running/succeeded state.
+                    claimed = row
+
+                print(f"[STEP4 worker] Processing job {job_id} provider={claimed.get('provider')} state_id={claimed.get('state_id')} worker={worker_token}")
                 try:
-                    updated = _process_job(row)
+                    updated = _process_claimed_job(claimed, worker_token=worker_token)
                     print(_json({
                         "job_id": updated.get("job_id"),
                         "status": updated.get("status"),
@@ -277,7 +452,7 @@ def main() -> None:
                     }))
                     processed_any = True
                 except Exception as e:
-                    update_job(job_id, status="failed", error_message=str(e))
+                    update_job(job_id, status="failed", error_message=str(e), external_job_id=worker_token, include_payload=False)
                     print(_json({"job_id": job_id, "status": "failed", "error": str(e)}))
                 if args.job_id:
                     break

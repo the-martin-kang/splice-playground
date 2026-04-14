@@ -96,6 +96,13 @@ class Settings:
     STEP4_JOB_TIMEOUT_SECONDS: int = int(_env("STEP4_JOB_TIMEOUT_SECONDS", "21600") or "21600")
     STEP4_ALIGNMENT_BIN: Optional[str] = _env("STEP4_ALIGNMENT_BIN")
 
+    # Reliability / performance knobs
+    SUPABASE_RETRY_ATTEMPTS: int = int(_env("SUPABASE_RETRY_ATTEMPTS", "3") or "3")
+    SUPABASE_RETRY_BACKOFF_SECONDS: float = float(_env("SUPABASE_RETRY_BACKOFF_SECONDS", "0.75") or "0.75")
+    STEP4_JOB_POLL_SECONDS: int = int(_env("STEP4_JOB_POLL_SECONDS", "15") or "15")
+    STEP4_MAX_STATE_JOB_SUMMARY: int = int(_env("STEP4_MAX_STATE_JOB_SUMMARY", "3") or "3")
+    STEP4_ARTIFACT_POLICY: str = _env("STEP4_ARTIFACT_POLICY", "minimal") or "minimal"
+
     def __post_init__(self) -> None:
         origins = _parse_csv(_env("CORS_ORIGINS", ""))
         object.__setattr__(self, "CORS_ORIGINS", origins)

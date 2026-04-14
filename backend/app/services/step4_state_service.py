@@ -531,6 +531,8 @@ def _asset_public_from_payload(asset: Dict[str, Any]) -> Step4JobAssetPublic:
         viewer_format=_viewer_format(file_format),
         bucket=bucket,
         path=path,
+        name=(str(asset.get("name")) if asset.get("name") is not None else None),
+        is_default=bool(asset.get("is_default")),
         signed_url=url,
         signed_url_expires_in=expires,
     )
@@ -540,6 +542,9 @@ def _asset_public_from_payload(asset: Dict[str, Any]) -> Step4JobAssetPublic:
 def _job_public(row: Dict[str, Any]) -> Step4StructureJobPublic:
     payload = row.get("result_payload") or {}
     assets = [_asset_public_from_payload(a) for a in (payload.get("assets") or []) if isinstance(a, dict)]
+    default_asset = next((a for a in assets if a.kind == "structure" and a.is_default), None)
+    if default_asset is None:
+        default_asset = next((a for a in assets if a.kind == "structure"), None)
     comparison = payload.get("comparison_to_normal") or {}
     structure_comparison_raw = payload.get("structure_comparison") or None
     structure_comparison = None
@@ -551,6 +556,18 @@ def _job_public(row: Dict[str, Any]) -> Step4StructureJobPublic:
             rmsd=(float(structure_comparison_raw["rmsd"]) if structure_comparison_raw.get("rmsd") is not None else None),
             aligned_length=(int(structure_comparison_raw["aligned_length"]) if structure_comparison_raw.get("aligned_length") is not None else None),
             raw_text_excerpt=structure_comparison_raw.get("raw_text_excerpt"),
+        )
+    molstar_default = None
+    if default_asset and default_asset.signed_url and default_asset.kind == "structure":
+        molstar_default = Step4MolstarTargetPublic(
+            structure_asset_id=None,
+            provider=str(row.get("provider") or "unknown"),
+            source_db=None,
+            source_id=None,
+            source_chain_id=None,
+            title=default_asset.name or "Predicted structure",
+            url=default_asset.signed_url,
+            format=default_asset.viewer_format or _viewer_format(default_asset.file_format),
         )
     return Step4StructureJobPublic(
         job_id=str(row.get("job_id")),
@@ -565,6 +582,8 @@ def _job_public(row: Dict[str, Any]) -> Step4StructureJobPublic:
         user_protein_length=(int(payload["user_protein_length"]) if payload.get("user_protein_length") is not None else None),
         reused_baseline_structure=bool(payload.get("reused_baseline_structure")),
         assets=assets,
+        default_structure_asset=default_asset,
+        molstar_default=molstar_default,
         confidence=(payload.get("confidence") or {}),
         comparison_to_normal=comparison,
         structure_comparison=structure_comparison,
@@ -573,15 +592,33 @@ def _job_public(row: Dict[str, Any]) -> Step4StructureJobPublic:
 
 
 
-def _hydrate_jobs_for_state(state_id: str) -> Tuple[List[Step4StructureJobPublic], Optional[Step4StructureJobPublic]]:
-    rows = list_jobs_for_state(state_id)
+def _hydrate_jobs_for_state(
+    state_id: str,
+    *,
+    include_latest_payload: bool = True,
+    history_limit: Optional[int] = None,
+) -> Tuple[List[Step4StructureJobPublic], Optional[Step4StructureJobPublic]]:
+    settings = get_settings()
+    limit = int(history_limit or settings.STEP4_MAX_STATE_JOB_SUMMARY or 3)
+    rows = list_jobs_for_state(state_id, include_payload=False, limit=limit)
     jobs = [_job_public(r) for r in rows]
-    latest = jobs[0] if jobs else None
+    latest: Optional[Step4StructureJobPublic] = jobs[0] if jobs else None
+    if rows and include_latest_payload:
+        detailed_row = get_job(str(rows[0].get("job_id")), include_payload=True)
+        if detailed_row is not None:
+            latest = _job_public(detailed_row)
+            jobs[0] = latest
     return jobs, latest
 
 
 
-def get_step4_for_state(state_id: str, *, include_sequences: bool = False) -> Step4StateResponse:
+def get_step4_for_state(
+    state_id: str,
+    *,
+    include_sequences: bool = False,
+    hydrate_jobs: bool = True,
+    include_latest_job_payload: bool = True,
+) -> Step4StateResponse:
     state_row, disease_row, gene_row = _get_state_disease_gene(state_id)
     baseline = get_step4_baseline_for_state(state_id, include_sequences=True)
 
@@ -628,15 +665,15 @@ def get_step4_for_state(state_id: str, *, include_sequences: bool = False) -> St
     user_protein_seq = translate_cds(user_cds_seq).protein_seq if user_cds_seq else ""
     comparison = _sequence_comparison(baseline.baseline_protein.protein_seq or "", user_protein_seq)
 
-    jobs, latest_job = _hydrate_jobs_for_state(state_id)
+    jobs, latest_job = _hydrate_jobs_for_state(state_id, include_latest_payload=include_latest_job_payload) if hydrate_jobs else ([], None)
     settings = get_settings()
     structure_prediction_enabled = bool(settings.STEP4_ENABLE_STRUCTURE_JOBS)
     structure_prediction_message = (
         None
         if structure_prediction_enabled
         else (
-            "STEP4 user-structure prediction is disabled on this CPU-only deployment. "
-            "Use the normal baseline structure now, then enable STEP4_ENABLE_STRUCTURE_JOBS=true on the GPU worker deployment for ColabFold jobs."
+            "STEP4 user-structure prediction is disabled right now. "
+            "Use the normal baseline structure now, then set STEP4_ENABLE_STRUCTURE_JOBS=true on the public API server and start the ColabFold worker on the GPU host for STEP4 jobs."
         )
     )
     normalized_structures = [s.model_copy(update={"viewer_format": _viewer_format(s.file_format)}) for s in baseline.structures]
@@ -672,8 +709,14 @@ def get_step4_for_state(state_id: str, *, include_sequences: bool = False) -> St
         warnings=list(step3.warnings) + sequence_warnings + translation_warnings,
     )
 
+    baseline_protein_public = baseline.baseline_protein if include_sequences else baseline.baseline_protein.model_copy(update={
+        "canonical_mrna_seq": None,
+        "cds_seq": None,
+        "protein_seq": None,
+    })
+
     normal_track = Step4NormalTrackPublic(
-        baseline_protein=baseline.baseline_protein,
+        baseline_protein=baseline_protein_public,
         structures=normalized_structures,
         default_structure_asset_id=(default_structure.structure_asset_id if default_structure else baseline.default_structure_asset_id),
         default_structure=default_structure,

@@ -4,10 +4,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/splice-playground/backend
-EnvironmentFile=/home/ubuntu/splice-playground/backend/.env.worker
-ExecStart=/home/ubuntu/.local/bin/uv run scripts/run_step4_jobs.py
+User=ec2-user
+WorkingDirectory=/home/ec2-user/splice-playground/backend
+EnvironmentFile=/home/ec2-user/splice-playground/backend/.env.worker
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ec2-user/.local/bin/uv run python -u scripts/run_step4_jobs.py --provider colabfold --poll-seconds 15 --limit 2
 Restart=always
 RestartSec=10
 

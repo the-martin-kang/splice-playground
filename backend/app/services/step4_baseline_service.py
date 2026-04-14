@@ -126,7 +126,7 @@ def _build_step4_baseline_response(
     if not grow:
         raise HTTPException(status_code=404, detail=f"gene not found: {gene_id}")
 
-    protein_rows = list_protein_references_by_gene(gene_id)
+    protein_rows = list_protein_references_by_gene(gene_id, include_sequences=include_sequences)
     protein_row = _choose_best_protein_reference(protein_rows)
     structure_rows = list_structure_assets(str(protein_row["protein_reference_id"]))
     structures_public = [_structure_public(r) for r in structure_rows]
