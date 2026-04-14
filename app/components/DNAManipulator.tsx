@@ -64,7 +64,8 @@ export default function DNAManipulator() {
 
   // 편집된 시퀀스 (원본과 비교용)
   const [editedSequences, setEditedSequences] = useState<{ [regionId: string]: string }>({});
-  const [originalSequences, setOriginalSequences] = useState<{ [regionId: string]: string }>({});
+  const [originalSequences, setOriginalSequences] = useState<{ [regionId: string]: string }>({});  // 정상 서열 (ref)
+  const [snvSequences, setSnvSequences] = useState<{ [regionId: string]: string }>({});  // SNV 적용 서열 (alt)
   const [currentSequence, setCurrentSequence] = useState<string>('');
 
   // 다이어그램에 표시할 5개 region (focus 기준 ±2)
@@ -119,6 +120,25 @@ export default function DNAManipulator() {
     fetchDiseaseDetail();
   }, [diseaseId]);
 
+  // SNV가 해당 region에 있는지 확인하고, SNV 적용 서열 생성
+  const applySnvToSequence = (sequence: string, region: Region): string => {
+    if (!diseaseDetail?.splice_altering_snv) return sequence;
+    
+    const snvPos = diseaseDetail.splice_altering_snv.pos_gene0;
+    const { gene_start_idx, gene_end_idx } = region;
+    
+    // SNV가 이 region 내에 있는지 확인
+    if (snvPos >= gene_start_idx && snvPos <= gene_end_idx) {
+      const localIndex = snvPos - gene_start_idx;
+      const alt = diseaseDetail.splice_altering_snv.alt;
+      
+      // SNV 적용
+      return sequence.substring(0, localIndex) + alt + sequence.substring(localIndex + 1);
+    }
+    
+    return sequence;
+  };
+
   // Region 클릭 시 시퀀스 로드
   const handleRegionClick = async (region: Region) => {
     if (!diseaseId) return;
@@ -133,9 +153,13 @@ export default function DNAManipulator() {
     // 시퀀스가 이미 있으면 그대로 사용
     if (region.sequence) {
       setSelectedRegion(region);
-      setCurrentSequence(region.sequence);
-      setEditedSequences(prev => ({ ...prev, [region.region_id]: region.sequence! }));
-      setOriginalSequences(prev => ({ ...prev, [region.region_id]: region.sequence! }));
+      const originalSeq = region.sequence;
+      const snvSeq = applySnvToSequence(originalSeq, region);
+      
+      setOriginalSequences(prev => ({ ...prev, [region.region_id]: originalSeq }));
+      setSnvSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
+      setEditedSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
+      setCurrentSequence(snvSeq);
       return;
     }
 
@@ -153,10 +177,13 @@ export default function DNAManipulator() {
       }
 
       const data: RegionData = await response.json();
-      const sequence = data.region.sequence || '';
-      setCurrentSequence(sequence);
-      setEditedSequences(prev => ({ ...prev, [region.region_id]: sequence }));
-      setOriginalSequences(prev => ({ ...prev, [region.region_id]: sequence }));
+      const originalSeq = data.region.sequence || '';
+      const snvSeq = applySnvToSequence(originalSeq, region);
+      
+      setOriginalSequences(prev => ({ ...prev, [region.region_id]: originalSeq }));
+      setSnvSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
+      setEditedSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
+      setCurrentSequence(snvSeq);
 
     } catch (err) {
       console.error('Error fetching region:', err);
@@ -166,8 +193,12 @@ export default function DNAManipulator() {
     }
   };
 
-  // 시퀀스 편집 핸들러
-  const handleSequenceChange = (newSequence: string) => {
+  // 시퀀스 편집 핸들러 (길이 고정, 지운 자리에 N 삽입, N 대체 가능)
+  const handleSequenceChange = (newSequence: string, cursorPosition?: number) => {
+    if (!selectedRegion) return;
+    
+    const originalLength = originalSequences[selectedRegion.region_id]?.length || currentSequence.length;
+    
     // 한글 → 영문 변환 (ㅁ→A, ㅊ→C, ㅎ→G, ㅅ→T, ㅜ→N)
     const koreanToEnglish: { [key: string]: string } = {
       'ㅁ': 'A', 'ㅊ': 'C', 'ㅎ': 'G', 'ㅅ': 'T', 'ㅜ': 'N',
@@ -187,23 +218,79 @@ export default function DNAManipulator() {
       // 그 외 문자는 무시
     }
     
-    // 빈 문자열이 되는 것 방지
-    if (converted.length === 0 && currentSequence.length > 0) {
-      return;
+    let finalSequence: string;
+    const prevSequence = currentSequence;
+    
+    if (converted.length < originalLength) {
+      // 삭제된 경우: 커서 위치 기준으로 삭제된 위치에 N 삽입
+      const deleteCount = originalLength - converted.length;
+      const deletePosition = cursorPosition !== undefined ? cursorPosition : converted.length;
+      
+      // 삭제 위치 앞부분 + N + 삭제 위치 뒷부분
+      finalSequence = 
+        converted.substring(0, deletePosition) + 
+        'N'.repeat(deleteCount) + 
+        converted.substring(deletePosition);
+        
+    } else if (converted.length > originalLength) {
+      // 초과된 경우: 커서 위치 바로 뒤의 N을 대체
+      const excessCount = converted.length - originalLength;
+      const insertPos = cursorPosition !== undefined ? cursorPosition : converted.length;
+      
+      // 새로 입력된 부분 (커서 앞쪽)
+      const beforeCursor = converted.substring(0, insertPos);
+      // 이전 시퀀스에서 입력 시작 위치 이후 부분
+      const startInPrev = insertPos - excessCount;
+      const afterCursorInPrev = prevSequence.substring(startInPrev);
+      
+      // N을 제거하면서 뒤 문자 유지
+      let afterPart = '';
+      let nToRemove = excessCount;
+      
+      for (let i = 0; i < afterCursorInPrev.length; i++) {
+        if (afterCursorInPrev[i] === 'N' && nToRemove > 0) {
+          nToRemove--;
+          // N은 건너뜀
+        } else {
+          afterPart += afterCursorInPrev[i];
+        }
+      }
+      
+      finalSequence = (beforeCursor + afterPart).substring(0, originalLength);
+      
+      // 길이가 부족하면 N으로 채움
+      if (finalSequence.length < originalLength) {
+        finalSequence += 'N'.repeat(originalLength - finalSequence.length);
+      }
+    } else {
+      finalSequence = converted;
     }
     
-    setCurrentSequence(converted);
+    setCurrentSequence(finalSequence);
     
-    if (selectedRegion) {
-      setEditedSequences(prev => ({
-        ...prev,
-        [selectedRegion.region_id]: converted
-      }));
-    }
+    setEditedSequences(prev => ({
+      ...prev,
+      [selectedRegion.region_id]: finalSequence
+    }));
   };
 
-  // 변이 위치 확인 (현재 region 내에 SNV가 있는지)
-  const getMutationIndex = (): number | null => {
+  // SNV 서열과 비교하여 변경된 위치 찾기 (사용자 편집)
+  const getChangedPositions = (): number[] => {
+    if (!selectedRegion) return [];
+    
+    const snvSeq = snvSequences[selectedRegion.region_id] || '';
+    
+    const changes: number[] = [];
+    for (let i = 0; i < currentSequence.length; i++) {
+      if (currentSequence[i] !== snvSeq[i]) {
+        changes.push(i);
+      }
+    }
+    return changes;
+  };
+  
+  // 원본과 SNV 서열 비교하여 SNV 위치 찾기
+  const getSnvPosition = (): number | null => {
     if (!selectedRegion || !diseaseDetail?.splice_altering_snv) return null;
     
     const snvPos = diseaseDetail.splice_altering_snv.pos_gene0;
@@ -215,44 +302,42 @@ export default function DNAManipulator() {
     return null;
   };
 
-  // 원본과 비교하여 변경된 위치 찾기
-  const getChangedPositions = (): number[] => {
-    if (!selectedRegion) return [];
-    
-    const originalSequence = originalSequences[selectedRegion.region_id] || '';
-    
-    const changes: number[] = [];
-    for (let i = 0; i < currentSequence.length; i++) {
-      if (currentSequence[i] !== originalSequence[i]) {
-        changes.push(i);
-      }
-    }
-    return changes;
-  };
-
   // Step 3로 이동
   const handleNextStep = () => {
     // 편집된 시퀀스 정보를 localStorage에 저장 (또는 Context API 사용 가능)
     const step2Data = {
       diseaseId,
       diseaseDetail,
-      editedSequences
+      editedSequences,
+      originalSequences,
+      snvSequences
     };
     localStorage.setItem('step2Data', JSON.stringify(step2Data));
     
     router.push(`/step3?disease_id=${encodeURIComponent(diseaseId || '')}`);
   };
 
-  // 시퀀스에 수정 여부가 있는지 확인
+  // 시퀀스에 수정 여부가 있는지 확인 (SNV 적용 서열과 비교)
   const hasEdits = (regionId: string): boolean => {
-    // 원본 시퀀스가 없으면 (아직 로드 안됨) 수정 안된 것으로 처리
-    if (!originalSequences[regionId]) return false;
+    // SNV 적용 서열이 없으면 (아직 로드 안됨) 수정 안된 것으로 처리
+    if (!snvSequences[regionId]) return false;
     
     // 편집된 시퀀스가 없으면 수정 안됨
     if (!editedSequences[regionId]) return false;
     
-    // 원본과 편집된 시퀀스 비교
-    return editedSequences[regionId] !== originalSequences[regionId];
+    // SNV 적용 서열과 편집된 시퀀스 비교
+    return editedSequences[regionId] !== snvSequences[regionId];
+  };
+  
+  // SNV가 있는 region인지 확인
+  const hasSNV = (regionId: string): boolean => {
+    if (!diseaseDetail?.splice_altering_snv) return false;
+    
+    const region = diagramRegions.find(r => r.region_id === regionId);
+    if (!region) return false;
+    
+    const snvPos = diseaseDetail.splice_altering_snv.pos_gene0;
+    return snvPos >= region.gene_start_idx && snvPos <= region.gene_end_idx;
   };
 
   if (isLoading) {
@@ -282,7 +367,7 @@ export default function DNAManipulator() {
     );
   }
 
-  const mutationIndex = getMutationIndex();
+  const snvPosition = getSnvPosition();
   const changedPositions = getChangedPositions();
 
   return (
@@ -354,15 +439,20 @@ export default function DNAManipulator() {
                         className={`border-2 rounded px-8 py-3 min-w-28 text-center transition-all
                           ${selectedRegion?.region_id === region.region_id 
                             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-300' 
-                            : 'border-black bg-white hover:bg-gray-50'}
-                          ${hasEdits(region.region_id) ? 'border-red-500' : ''}
+                            : hasSNV(region.region_id)
+                              ? 'border-red-500 bg-red-50'
+                              : 'border-black bg-white hover:bg-gray-50'}
+                          ${hasEdits(region.region_id) ? 'border-orange-500' : ''}
                         `}
                       >
-                        <span className={`text-sm font-semibold ${hasEdits(region.region_id) ? 'text-red-600' : 'text-black'}`}>
+                        <span className={`text-sm font-semibold ${hasSNV(region.region_id) ? 'text-red-600' : hasEdits(region.region_id) ? 'text-orange-600' : 'text-black'}`}>
                           Exon{region.region_number}
                         </span>
+                        {hasSNV(region.region_id) && (
+                          <div className="text-xs text-red-500">SNV</div>
+                        )}
                         {hasEdits(region.region_id) && (
-                          <div className="text-xs text-red-500">mutant</div>
+                          <div className="text-xs text-orange-500">edited</div>
                         )}
                       </button>
                     ) : (
@@ -373,15 +463,19 @@ export default function DNAManipulator() {
                           ${selectedRegion?.region_id === region.region_id ? 'scale-110' : ''}
                         `}
                       >
-                        <div className={`w-32 h-1 ${hasEdits(region.region_id) ? 'bg-red-500' : 'bg-black'} 
-                          ${selectedRegion?.region_id === region.region_id ? 'h-2 bg-blue-500' : ''}
+                        <div className={`w-32 h-1 
+                          ${selectedRegion?.region_id === region.region_id ? 'h-2 bg-blue-500' : 
+                            hasSNV(region.region_id) ? 'bg-red-500' : 
+                            hasEdits(region.region_id) ? 'bg-orange-500' : 'bg-black'}
                         `}></div>
                         <span className={`text-xs mt-1 
-                          ${hasEdits(region.region_id) ? 'text-red-500' : 'text-black'}
+                          ${hasSNV(region.region_id) ? 'text-red-500 font-semibold' : 
+                            hasEdits(region.region_id) ? 'text-orange-500' : 'text-black'}
                           ${selectedRegion?.region_id === region.region_id ? 'text-blue-500 font-semibold' : ''}
                         `}>
                           Intron{region.region_number}
-                          {hasEdits(region.region_id) && ' (mutant)'}
+                          {hasSNV(region.region_id) && ' (SNV)'}
+                          {hasEdits(region.region_id) && ' (edited)'}
                         </span>
                       </button>
                     )}
@@ -409,44 +503,71 @@ export default function DNAManipulator() {
                 </div>
               ) : (
                 <>
-                  {/* 원본 서열 (고정) */}
+                  {/* 원본 서열 (정상 - ref) */}
                   <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-600 mb-1">원본 서열</p>
+                    <p className="text-sm font-semibold text-black mb-1">정상 서열 (Reference)</p>
                     <div className="bg-gray-100 border border-gray-300 rounded p-4 font-mono text-sm overflow-x-auto max-h-32 overflow-y-auto text-black">
-                      {originalSequences[selectedRegion.region_id] || '로딩 중...'}
-                    </div>
-                  </div>
-
-                  {/* 수정된 시퀀스 표시 (색상 강조) */}
-                  <div className="mb-2">
-                    <p className="text-sm font-semibold text-black mb-1">편집된 서열</p>
-                    <div className="bg-white border border-gray-300 rounded p-4 font-mono text-sm overflow-x-auto max-h-32 overflow-y-auto text-black">
-                      {currentSequence.split('').map((char, idx) => {
-                        const isMutation = mutationIndex === idx;
-                        const isChanged = changedPositions.includes(idx);
+                      {originalSequences[selectedRegion.region_id]?.split('').map((char, idx) => {
+                        const editedChar = currentSequence[idx];
+                        const isDifferent = char !== editedChar;
                         
                         return (
                           <span
                             key={idx}
-                            className={`
-                              ${isMutation ? 'bg-red-500 text-white font-bold' : ''}
-                              ${isChanged && !isMutation ? 'bg-yellow-300 text-black' : ''}
-                            `}
+                            className={isDifferent ? 'bg-yellow-300 font-bold' : ''}
                           >
                             {char}
                           </span>
                         );
-                      })}
+                      }) || '로딩 중...'}
                     </div>
                   </div>
 
-                  {/* 편집 영역 */}
-                  <textarea
-                    value={currentSequence}
-                    onChange={(e) => handleSequenceChange(e.target.value)}
-                    className="w-full h-32 p-3 border-2 border-gray-300 rounded-lg font-mono text-sm resize-none focus:border-blue-500 focus:outline-none text-black bg-white"
-                    placeholder="DNA 서열을 편집하세요 (A, C, G, T, N만 허용)"
-                  />
+                  {/* 편집 영역 (색상 표시 + 편집 가능) */}
+                  <div className="mb-2">
+                    <p className="text-sm font-semibold text-blue-600 mb-1">편집 서열 (클릭하여 수정)</p>
+                    <div 
+                      className="bg-white border-2 border-gray-300 rounded-lg p-4 font-mono text-sm overflow-x-auto max-h-48 overflow-y-auto text-black focus:border-blue-500 focus:outline-none cursor-text"
+                      contentEditable
+                      suppressContentEditableWarning
+                      onInput={(e) => {
+                        // 커서 위치 정확히 가져오기
+                        const selection = window.getSelection();
+                        let cursorPosition = 0;
+                        
+                        if (selection && selection.rangeCount > 0) {
+                          const range = selection.getRangeAt(0);
+                          const preCaretRange = range.cloneRange();
+                          preCaretRange.selectNodeContents(e.currentTarget);
+                          preCaretRange.setEnd(range.startContainer, range.startOffset);
+                          cursorPosition = preCaretRange.toString().length;
+                        }
+                        
+                        const text = e.currentTarget.textContent || '';
+                        handleSequenceChange(text, cursorPosition);
+                      }}
+                      onBlur={(e) => {
+                        const text = e.currentTarget.textContent || '';
+                        handleSequenceChange(text);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                        }
+                      }}
+                      dangerouslySetInnerHTML={{
+                        __html: currentSequence.split('').map((char, idx) => {
+                          const originalChar = originalSequences[selectedRegion.region_id]?.[idx];
+                          const isDifferent = char !== originalChar;
+                          
+                          if (isDifferent) {
+                            return `<span class="bg-yellow-300 font-bold">${char}</span>`;
+                          }
+                          return char;
+                        }).join('')
+                      }}
+                    />
+                  </div>
 
                   {changedPositions.length > 0 && (
                     <p className="text-red-600 text-sm mt-2">
