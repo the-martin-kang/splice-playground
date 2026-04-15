@@ -14,15 +14,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="relative min-h-screen overflow-x-hidden bg-slate-950">
-        <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-          <iframe
-            src="https://my.spline.design/dnaparticles-PQuxI1TYwbQkoioUDL5p6yKd/"
-            className="h-full w-full border-0"
-            frameBorder="0"
-            width="100%"
-            height="100%"
-          />
-        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+          style={{
+            backgroundImage:
+              "linear-gradient(180deg, rgba(2, 6, 23, 0.24) 0%, rgba(2, 6, 23, 0.38) 100%), url('/images/background.png')",
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'cover',
+          }}
+        />
+        <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.18),transparent_42%),radial-gradient(circle_at_bottom,rgba(56,189,248,0.10),transparent_38%)]" />
         <div className="relative z-10">{children}</div>
       </body>
     </html>
