@@ -4,10 +4,28 @@ import { useEffect, useRef, useState } from 'react';
 
 type MolstarFormat = 'mmcif' | 'bcif' | 'pdb' | string;
 
+export interface MolstarStructureInput {
+  url: string | null;
+  format?: MolstarFormat | null;
+  label?: string | null;
+  chainId?: string | null;
+  color?: number;
+}
+
+export interface MolstarComputedComparison {
+  method: 'tm-align' | 'sequence-align' | 'identical-reuse' | 'unavailable';
+  tm_score_1?: number | null;
+  tm_score_2?: number | null;
+  rmsd?: number | null;
+  aligned_length?: number | null;
+  note?: string | null;
+}
+
 interface MolstarViewerProps {
-  structureUrl: string | null;
-  structureFormat?: MolstarFormat | null;
-  structureLabel?: string | null;
+  primary: MolstarStructureInput | null;
+  secondary?: MolstarStructureInput | null;
+  mode?: 'single' | 'overlay';
+  onComputedComparison?: (comparison: MolstarComputedComparison | null) => void;
 }
 
 function formatViewerError(error: unknown) {
@@ -15,161 +33,288 @@ function formatViewerError(error: unknown) {
   return 'Mol* viewer를 초기화할 수 없습니다.';
 }
 
-const MOLSTAR_SCRIPT_ID = 'molstar-viewer-script';
 const MOLSTAR_STYLE_ID = 'molstar-viewer-style';
-const MOLSTAR_SCRIPT_SRC = '/vendor/molstar/molstar.js';
 const MOLSTAR_STYLE_HREF = '/vendor/molstar/molstar.css';
+const DEFAULT_PRIMARY_COLOR = 0x22c55e;
+const DEFAULT_SECONDARY_COLOR = 0xef4444;
 
-type MolstarViewerInstance = {
-  dispose: () => void;
-  loadStructureFromUrl: (
-    url: string,
-    format?: string,
-    isBinary?: boolean,
-    options?: { label?: string }
-  ) => Promise<void>;
-};
+async function ensureMolstarStyle() {
+  if (typeof window === 'undefined') return;
+  if (document.getElementById(MOLSTAR_STYLE_ID)) return;
 
-type MolstarGlobal = {
-  Viewer: {
-    create: (
-      elementOrId: string | HTMLElement,
-      options?: Record<string, unknown>
-    ) => Promise<MolstarViewerInstance>;
-  };
-};
-
-declare global {
-  interface Window {
-    molstar?: MolstarGlobal;
-  }
+  const link = document.createElement('link');
+  link.id = MOLSTAR_STYLE_ID;
+  link.rel = 'stylesheet';
+  link.href = MOLSTAR_STYLE_HREF;
+  document.head.appendChild(link);
 }
 
-let molstarAssetsPromise: Promise<MolstarGlobal> | null = null;
+async function importMolstarModules() {
+  const [
+    pluginUi,
+    react18,
+    spec,
+    assets,
+    color,
+    structure,
+    builder,
+    compiler,
+    transforms,
+    tmAlignModule,
+  ] = await Promise.all([
+    import('molstar/lib/mol-plugin-ui/index.js'),
+    import('molstar/lib/mol-plugin-ui/react18.js'),
+    import('molstar/lib/mol-plugin-ui/spec.js'),
+    import('molstar/lib/mol-util/assets.js'),
+    import('molstar/lib/mol-util/color/index.js'),
+    import('molstar/lib/mol-model/structure.js'),
+    import('molstar/lib/mol-script/language/builder.js'),
+    import('molstar/lib/mol-script/runtime/query/compiler.js'),
+    import('molstar/lib/mol-plugin-state/transforms.js'),
+    import('molstar/lib/mol-model/structure/structure/util/tm-align.js'),
+  ]);
 
-function ensureMolstarAssets() {
-  if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Mol* viewer는 브라우저에서만 초기화할 수 있습니다.'));
+  return {
+    createPluginUI: pluginUi.createPluginUI,
+    renderReact18: react18.renderReact18,
+    DefaultPluginUISpec: spec.DefaultPluginUISpec,
+    Asset: assets.Asset,
+    Color: color.Color,
+    QueryContext: structure.QueryContext,
+    StructureSelection: structure.StructureSelection,
+    StructureElement: structure.StructureElement,
+    MolScriptBuilder: builder.MolScriptBuilder,
+    compile: compiler.compile,
+    StateTransforms: transforms.StateTransforms,
+    tmAlign: tmAlignModule.tmAlign,
+  };
+}
+
+function createExpression(MS: any, chainId?: string | null, atomName?: string | null) {
+  const params: Record<string, unknown> = {};
+  if (chainId) {
+    params['chain-test'] = MS.core.rel.eq([
+      MS.struct.atomProperty.macromolecular.auth_asym_id(),
+      chainId,
+    ]);
   }
+  if (atomName) {
+    params['atom-test'] = MS.core.rel.eq([
+      MS.struct.atomProperty.macromolecular.label_atom_id(),
+      atomName,
+    ]);
+  }
+  return MS.struct.generator.atomGroups(params);
+}
 
-  if (window.molstar) return Promise.resolve(window.molstar);
-  if (molstarAssetsPromise) return molstarAssetsPromise;
+async function loadStructure(plugin: any, modules: Awaited<ReturnType<typeof importMolstarModules>>, input: MolstarStructureInput) {
+  const format = (input.format || 'mmcif') as MolstarFormat;
+  const isBinary = format === 'bcif';
+  if (!input.url) throw new Error('구조 URL이 없습니다.');
+  const data = await plugin.builders.data.download(
+    { url: modules.Asset.Url(input.url), isBinary, label: input.label || undefined },
+    { state: { isGhost: true } }
+  );
+  const trajectory = await plugin.builders.structure.parseTrajectory(data, format);
+  const model = await plugin.builders.structure.createModel(trajectory);
+  const structure = await plugin.builders.structure.createStructure(model);
+  return { data, trajectory, model, structure };
+}
 
-  molstarAssetsPromise = new Promise<MolstarGlobal>((resolve, reject) => {
-    if (!document.getElementById(MOLSTAR_STYLE_ID)) {
-      const link = document.createElement('link');
-      link.id = MOLSTAR_STYLE_ID;
-      link.rel = 'stylesheet';
-      link.href = MOLSTAR_STYLE_HREF;
-      document.head.appendChild(link);
-    }
+async function addCartoonRepresentation(
+  plugin: any,
+  modules: Awaited<ReturnType<typeof importMolstarModules>>,
+  structureCell: any,
+  input: MolstarStructureInput,
+  fallbackLabel: string,
+  fallbackColor: number
+) {
+  const expression = createExpression(modules.MolScriptBuilder, input.chainId || undefined, null);
+  const component = await plugin.builders.structure.tryCreateComponentFromExpression(
+    structureCell,
+    expression,
+    input.label || fallbackLabel
+  );
 
-    const existingScript = document.getElementById(MOLSTAR_SCRIPT_ID) as HTMLScriptElement | null;
+  const colorValue = modules.Color(input.color ?? fallbackColor);
+  const target = component || structureCell;
 
-    const handleReady = () => {
-      if (window.molstar) {
-        resolve(window.molstar);
-      } else {
-        reject(new Error('Mol* 브라우저 번들을 로드했지만 전역 객체를 찾지 못했습니다.'));
-      }
-    };
-
-    if (existingScript) {
-      if (window.molstar) {
-        handleReady();
-        return;
-      }
-
-      existingScript.addEventListener('load', handleReady, { once: true });
-      existingScript.addEventListener(
-        'error',
-        () => reject(new Error('Mol* 브라우저 번들을 불러올 수 없습니다.')),
-        { once: true }
-      );
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.id = MOLSTAR_SCRIPT_ID;
-    script.src = MOLSTAR_SCRIPT_SRC;
-    script.async = true;
-    script.onload = handleReady;
-    script.onerror = () => reject(new Error('Mol* 브라우저 번들을 불러올 수 없습니다.'));
-    document.body.appendChild(script);
+  await plugin.builders.structure.representation.addRepresentation(target, {
+    type: 'cartoon',
+    color: 'uniform',
+    colorParams: { value: colorValue },
   });
 
-  return molstarAssetsPromise;
+  return target;
+}
+
+function tryCreateCaLoci(modules: Awaited<ReturnType<typeof importMolstarModules>>, structureCell: any, chainId?: string | null) {
+  const data = structureCell?.cell?.obj?.data ?? structureCell?.obj?.data;
+  if (!data) return null;
+
+  const attempt = (candidateChain?: string | null) => {
+    const query = modules.compile(createExpression(modules.MolScriptBuilder, candidateChain, 'CA'));
+    const selection = query(new modules.QueryContext(data));
+    const loci = modules.StructureSelection.toLociWithCurrentUnits(selection);
+    return modules.StructureElement.Loci.size(loci) > 0 ? loci : null;
+  };
+
+  return attempt(chainId) || attempt(null);
+}
+
+async function applyTransform(plugin: any, modules: Awaited<ReturnType<typeof importMolstarModules>>, structureCell: any, matrix: any) {
+  const update = plugin.state.data
+    .build()
+    .to(structureCell)
+    .insert(modules.StateTransforms.Model.TransformStructureConformation, {
+      transform: { name: 'matrix', params: { data: matrix, transpose: false } },
+    });
+  await plugin.runTask(plugin.state.data.updateTree(update));
 }
 
 export default function MolstarViewer({
-  structureUrl,
-  structureFormat,
-  structureLabel,
+  primary,
+  secondary,
+  mode = 'single',
+  onComputedComparison,
 }: MolstarViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !structureUrl) return;
+    if (!containerRef.current || !primary?.url) return;
 
     let disposed = false;
-    let viewer: MolstarViewerInstance | null = null;
+    let plugin: any = null;
 
     const loadViewer = async () => {
       try {
         setViewerError(null);
-        const molstar = await ensureMolstarAssets();
-
-        if (!containerRef.current || disposed) return;
+        await ensureMolstarStyle();
+        const modules = await importMolstarModules();
+        if (disposed || !containerRef.current) return;
 
         containerRef.current.innerHTML = '';
 
-        viewer = await molstar.Viewer.create(containerRef.current, {
-          disabledExtensions: ['mp4-export'],
-          layoutIsExpanded: true,
-          layoutShowControls: false,
-          layoutShowRemoteState: false,
-          layoutShowSequence: false,
-          layoutShowLog: false,
-          layoutShowLeftPanel: false,
-          collapseLeftPanel: true,
-          viewportShowExpand: false,
-          viewportShowSelectionMode: false,
-          viewportShowAnimation: false,
-          viewportShowTrajectoryControls: false,
-          pdbProvider: 'pdbe',
-          emdbProvider: 'pdbe',
+        plugin = await modules.createPluginUI({
+          target: containerRef.current,
+          render: modules.renderReact18,
+          spec: {
+            ...modules.DefaultPluginUISpec(),
+            layout: {
+              initial: {
+                isExpanded: false,
+                showControls: false,
+                regionState: {
+                  top: 'hidden',
+                  bottom: 'hidden',
+                  left: 'hidden',
+                  right: 'hidden',
+                },
+              },
+            },
+            components: {
+              remoteState: 'none',
+              controls: {
+                top: 'none',
+                bottom: 'none',
+                left: 'none',
+                right: 'none',
+              },
+            },
+          },
         });
 
-        if (disposed || !viewer) {
-          viewer?.dispose();
-          return;
+        await plugin.clear();
+
+        if (mode === 'overlay' && secondary?.url) {
+          const primaryLoaded = await loadStructure(plugin, modules, primary);
+          const secondaryLoaded = await loadStructure(plugin, modules, secondary);
+
+          const primaryLoci = tryCreateCaLoci(modules, primaryLoaded.structure, primary.chainId);
+          const secondaryLoci = tryCreateCaLoci(modules, secondaryLoaded.structure, secondary.chainId);
+
+          let comparison: MolstarComputedComparison | null = null;
+          if (primaryLoci && secondaryLoci) {
+            const result = modules.tmAlign(primaryLoci, secondaryLoci);
+            await applyTransform(plugin, modules, secondaryLoaded.structure, result.bTransform);
+            comparison = {
+              method: 'tm-align',
+              tm_score_1: result.tmScoreA,
+              tm_score_2: result.tmScoreB,
+              rmsd: result.rmsd,
+              aligned_length: result.alignedLength,
+              note: 'frontend TM-align overlay',
+            };
+          } else {
+            comparison = {
+              method: 'unavailable',
+              note: 'C-alpha selection을 만들지 못해 overlay alignment를 생략했습니다.',
+            };
+          }
+
+          await addCartoonRepresentation(
+            plugin,
+            modules,
+            primaryLoaded.structure,
+            { ...primary, color: primary.color ?? DEFAULT_PRIMARY_COLOR },
+            primary.label || 'Normal Structure',
+            DEFAULT_PRIMARY_COLOR
+          );
+          await addCartoonRepresentation(
+            plugin,
+            modules,
+            secondaryLoaded.structure,
+            { ...secondary, color: secondary.color ?? DEFAULT_SECONDARY_COLOR },
+            secondary.label || 'User Structure',
+            DEFAULT_SECONDARY_COLOR
+          );
+
+          if (!disposed) onComputedComparison?.(comparison);
+        } else {
+          const loaded = await loadStructure(plugin, modules, primary);
+          await addCartoonRepresentation(
+            plugin,
+            modules,
+            loaded.structure,
+            { ...primary, color: primary.color ?? DEFAULT_PRIMARY_COLOR },
+            primary.label || 'Protein Structure',
+            DEFAULT_PRIMARY_COLOR
+          );
+          if (!disposed) onComputedComparison?.(null);
         }
-
-        const format = (structureFormat || 'mmcif') as MolstarFormat;
-        const isBinary = format === 'bcif';
-
-        await viewer.loadStructureFromUrl(structureUrl, format, isBinary, {
-          label: structureLabel || 'Protein Structure',
-        });
       } catch (error) {
         if (!disposed) {
           setViewerError(formatViewerError(error));
+          onComputedComparison?.(null);
         }
       }
     };
 
-    loadViewer();
+    void loadViewer();
 
     return () => {
       disposed = true;
-      viewer?.dispose();
+      plugin?.dispose?.();
     };
-  }, [structureUrl, structureFormat, structureLabel]);
+  }, [
+    primary?.url,
+    primary?.format,
+    primary?.label,
+    primary?.chainId,
+    primary?.color,
+    secondary?.url,
+    secondary?.format,
+    secondary?.label,
+    secondary?.chainId,
+    secondary?.color,
+    mode,
+    onComputedComparison,
+  ]);
 
-  if (!structureUrl) {
+  if (!primary?.url) {
     return (
-      <div className="flex h-[520px] items-center justify-center rounded-[20px] border border-dashed border-white/14 bg-white/4 px-6 text-center text-slate-800 backdrop-blur-sm">
+      <div className="flex h-[560px] items-center justify-center rounded-[20px] border border-dashed border-white/14 bg-white/4 px-6 text-center text-slate-800 backdrop-blur-sm">
         표시할 구조 파일 URL이 아직 없습니다.
       </div>
     );
@@ -177,12 +322,24 @@ export default function MolstarViewer({
 
   return (
     <div className="overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)]">
-      <div ref={containerRef} className="h-[520px] w-full" />
+      <div ref={containerRef} className="h-[560px] w-full" />
       {viewerError && (
         <div className="border-t border-white/10 bg-rose-500/10 px-4 py-3 text-sm text-rose-900">
           {viewerError}
         </div>
       )}
+      {mode === 'overlay' && secondary?.url ? (
+        <div className="flex flex-wrap gap-3 border-t border-white/10 px-4 py-3 text-xs text-slate-200">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
+            정상 구조
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#ef4444]" />
+            생성 구조
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

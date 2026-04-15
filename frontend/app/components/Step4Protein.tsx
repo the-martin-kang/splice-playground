@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import MolstarViewer from './MolstarViewer';
+import MolstarViewer, { MolstarComputedComparison, MolstarStructureInput } from './MolstarViewer';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.splice-playground-api.com';
@@ -233,7 +233,8 @@ export default function Step4Protein() {
   const [jobMessage, setJobMessage] = useState<string | null>(null);
   const [isSubmittingJob, setIsSubmittingJob] = useState(false);
   const [hasAutoSubmittedJob, setHasAutoSubmittedJob] = useState(false);
-  const [activeStructureView, setActiveStructureView] = useState<'normal' | 'user'>('normal');
+  const [activeStructureView, setActiveStructureView] = useState<'normal' | 'user' | 'overlay'>('normal');
+  const [frontendStructureComparison, setFrontendStructureComparison] = useState<Step4StructureComparison | null>(null);
 
   useEffect(() => {
     try {
@@ -334,7 +335,7 @@ export default function Step4Protein() {
         setJob(payload.job);
 
         if (payload.job.molstar_default?.url) {
-          setActiveStructureView('user');
+          setActiveStructureView('overlay');
         }
       } else {
         await fetchStep4(false);
@@ -375,7 +376,7 @@ export default function Step4Protein() {
         setJob(refreshedJob);
 
         if (refreshedJob.molstar_default?.url) {
-          setActiveStructureView('user');
+          setActiveStructureView('overlay');
         }
 
         if (isTerminalJob(refreshedJob)) {
@@ -421,12 +422,54 @@ export default function Step4Protein() {
   const normalStructureTarget = step4Data.normal_track.molstar_default || null;
   const userStructureTarget =
     job?.molstar_default || step4Data.user_track.latest_structure_job?.molstar_default || null;
-  const displayedStructureTarget =
-    activeStructureView === 'user' && userStructureTarget ? userStructureTarget : normalStructureTarget;
-  const structureComparison = job?.structure_comparison || null;
+
+  const normalViewerTarget: MolstarStructureInput | null = normalStructureTarget?.url
+    ? {
+        url: normalStructureTarget.url,
+        format: normalStructureTarget.format || 'mmcif',
+        label: normalStructureTarget.title || 'Normal Structure',
+        chainId: normalStructureTarget.source_chain_id || null,
+        color: 0x22c55e,
+      }
+    : null;
+
+  const overlaySecondary = userStructureTarget?.url
+    ? userStructureTarget
+    : comparison.same_as_normal && normalStructureTarget?.url
+      ? {
+          ...normalStructureTarget,
+          title: 'User Structure (baseline reuse)',
+        }
+      : null;
+
+  const userViewerTarget: MolstarStructureInput | null = overlaySecondary?.url
+    ? {
+        url: overlaySecondary.url,
+        format: overlaySecondary.format || 'mmcif',
+        label: overlaySecondary.title || 'User Structure',
+        chainId: overlaySecondary.source_chain_id || null,
+        color: 0xef4444,
+      }
+    : null;
+
+  const structureComparison =
+    job?.structure_comparison ||
+    frontendStructureComparison ||
+    (comparison.same_as_normal
+      ? {
+          method: 'identical-reuse',
+          tm_score_1: 1,
+          tm_score_2: 1,
+          rmsd: 0,
+          aligned_length: comparison.user_protein_length,
+        }
+      : null);
+
+  const singleDisplayedTarget =
+    activeStructureView === 'user' && userViewerTarget ? userViewerTarget : normalViewerTarget;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-transparent px-4 py-8 sm:px-6 lg:px-8">
+    <div className="relative min-h-screen overflow-x-hidden bg-transparent px-4 py-8 pb-16 sm:px-6 lg:px-8">
       <div className="relative mx-auto max-w-7xl space-y-8">
         <section className="rounded-[24px] border border-white/18 bg-white/5 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-lg sm:p-8">
           <div className="mb-4 inline-flex rounded-[14px] border border-black/10 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-slate-800">
@@ -475,7 +518,7 @@ export default function Step4Protein() {
             </p>
           </div>
           <div className="rounded-[18px] border border-white/16 bg-white/5 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Similarity</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-600">AA Similarity</p>
             <p className="mt-3 text-3xl font-black text-slate-950">
               {formatPercent(comparison.normalized_edit_similarity)}
             </p>
@@ -488,7 +531,7 @@ export default function Step4Protein() {
               <div>
                 <h2 className="text-2xl font-black text-slate-950">Mol* Structure Viewer</h2>
                 <p className="mt-1 text-sm text-slate-800">
-                  API 문서 기준으로 `molstar_default.url`의 `mmcif` 자산을 그대로 렌더합니다.
+                  단일 구조 보기와, 실제 좌표를 TM-align 기반으로 겹쳐 보는 overlay 비교를 모두 지원합니다.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -504,40 +547,73 @@ export default function Step4Protein() {
                 </button>
                 <button
                   onClick={() => setActiveStructureView('user')}
-                  disabled={!userStructureTarget}
+                  disabled={!userViewerTarget}
                   className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    activeStructureView === 'user' && userStructureTarget
+                    activeStructureView === 'user' && userViewerTarget
                       ? 'border-cyan-300/60 bg-cyan-100/12 text-cyan-900'
                       : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-40'
                   }`}
                 >
                   User Structure
                 </button>
+                <button
+                  onClick={() => setActiveStructureView('overlay')}
+                  disabled={!normalViewerTarget || !userViewerTarget}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    activeStructureView === 'overlay' && normalViewerTarget && userViewerTarget
+                      ? 'border-fuchsia-300/60 bg-fuchsia-100/12 text-fuchsia-900'
+                      : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-40'
+                  }`}
+                >
+                  Overlay Compare
+                </button>
               </div>
             </div>
 
-            <MolstarViewer
-              structureUrl={displayedStructureTarget?.url || null}
-              structureFormat={displayedStructureTarget?.format || 'mmcif'}
-              structureLabel={
-                displayedStructureTarget?.title ||
-                (activeStructureView === 'user' ? 'Predicted User Structure' : 'Reference Structure')
-              }
-            />
+            {activeStructureView === 'overlay' && normalViewerTarget && userViewerTarget ? (
+              <MolstarViewer
+                mode="overlay"
+                primary={normalViewerTarget}
+                secondary={userViewerTarget}
+                onComputedComparison={(nextComparison: MolstarComputedComparison | null) => {
+                  if (!nextComparison) {
+                    setFrontendStructureComparison(null);
+                    return;
+                  }
+                  setFrontendStructureComparison({
+                    method: nextComparison.method,
+                    tm_score_1: nextComparison.tm_score_1 ?? null,
+                    tm_score_2: nextComparison.tm_score_2 ?? null,
+                    rmsd: nextComparison.rmsd ?? null,
+                    aligned_length: nextComparison.aligned_length ?? null,
+                  });
+                }}
+              />
+            ) : (
+              <MolstarViewer
+                mode="single"
+                primary={singleDisplayedTarget}
+                onComputedComparison={() => {
+                  if (activeStructureView !== 'overlay') {
+                    setFrontendStructureComparison(null);
+                  }
+                }}
+              />
+            )}
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="rounded-[18px] border border-white/16 bg-white/5 p-4 text-sm text-slate-800">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Displayed Asset</p>
                 <p className="mt-2 font-semibold text-slate-950">
-                  {displayedStructureTarget?.title || '구조 자산 없음'}
+                  {activeStructureView === 'overlay' ? 'Normal + User overlay' : singleDisplayedTarget?.label || '구조 자산 없음'}
                 </p>
                 <p className="mt-2 text-slate-700">
-                  {displayedStructureTarget?.provider || '-'} / {displayedStructureTarget?.source_db || '-'}
+                  {activeStructureView === 'overlay' ? 'TM-align based superposition' : ((activeStructureView === 'user' ? userStructureTarget?.provider : normalStructureTarget?.provider) || '-') + ' / ' + ((activeStructureView === 'user' ? userStructureTarget?.source_db : normalStructureTarget?.source_db) || '-')}
                 </p>
                 <p className="mt-1 text-slate-700">
-                  {displayedStructureTarget?.source_id || '-'}
-                  {displayedStructureTarget?.source_chain_id
-                    ? ` · Chain ${displayedStructureTarget.source_chain_id}`
+                  {activeStructureView === 'overlay' ? `${normalStructureTarget?.source_id || '-'} vs ${overlaySecondary?.source_id || '-'}` : ((activeStructureView === 'user' ? userStructureTarget?.source_id : normalStructureTarget?.source_id) || '-')}
+                  {activeStructureView !== 'overlay' && ((activeStructureView === 'user' ? userStructureTarget?.source_chain_id : normalStructureTarget?.source_chain_id))
+                    ? ` · Chain ${activeStructureView === 'user' ? userStructureTarget?.source_chain_id : normalStructureTarget?.source_chain_id}`
                     : ''}
                 </p>
               </div>
@@ -568,7 +644,7 @@ export default function Step4Protein() {
           </div>
 
           <div className="space-y-6">
-            <section className="rounded-[24px] border border-white/18 bg-white/5 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-lg">
+            <section className="rounded-[24px] border border-white/18 bg-white/5 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-lg xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-black text-slate-950">Translation Summary</h2>
@@ -598,7 +674,7 @@ export default function Step4Protein() {
                   <span className="font-semibold">{translation.premature_stop_likely ? 'Yes' : 'No'}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                  <span>First Mismatch</span>
+                  <span>First AA Mismatch</span>
                   <span className="font-semibold">{comparison.first_mismatch_aa_1 ?? '-'}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
@@ -656,7 +732,12 @@ export default function Step4Protein() {
 
             {structureComparison ? (
               <section className="rounded-[24px] border border-white/18 bg-white/5 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-lg">
-                <h2 className="text-xl font-black text-slate-950">Structure Comparison</h2>
+                <h2 className="text-xl font-black text-slate-950">Structure Comparison (3D)</h2>
+                {structureComparison?.method ? (
+                  <div className="mb-3 rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-xs text-slate-700">
+                    Method: {structureComparison.method}
+                  </div>
+                ) : null}
                 <div className="mt-4 space-y-3 text-sm text-slate-800">
                   <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
                     <span>TM-score 1</span>
