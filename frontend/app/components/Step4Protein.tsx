@@ -386,8 +386,7 @@ export default function Step4Protein() {
       );
 
       if (!hasInitializedViewRef.current) {
-        const hasUser = Boolean(data.user_track.latest_structure_job?.molstar_default?.url);
-        setActiveStructureView(hasUser ? 'overlay' : 'normal');
+        setActiveStructureView('normal');
         hasInitializedViewRef.current = true;
       }
     } catch (fetchError) {
@@ -431,9 +430,6 @@ export default function Step4Protein() {
       if (payload?.job) {
         setJob(payload.job);
         setStableUserTarget((prev) => mergeMolstarTarget(prev, payload.job?.molstar_default || null));
-        if (payload.job.molstar_default?.url) {
-          setActiveStructureView('overlay');
-        }
       }
     } catch (submitError) {
       setJobError(formatError(submitError));
@@ -469,7 +465,6 @@ export default function Step4Protein() {
         setJob((prev) => ({ ...(prev || {}), ...refreshedJob } as Step4StructureJob));
         if (refreshedJob.molstar_default?.url) {
           setStableUserTarget((prev) => mergeMolstarTarget(prev, refreshedJob.molstar_default || null));
-          setActiveStructureView('overlay');
         }
       } catch (pollError) {
         setJobError(formatError(pollError));

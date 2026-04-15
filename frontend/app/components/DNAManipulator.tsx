@@ -295,8 +295,19 @@ export default function DNAManipulator() {
     const target = event.currentTarget;
     const start = target.selectionStart ?? 0;
     const end = target.selectionEnd ?? start;
+    const lowerKey = event.key.toLowerCase();
+    const blockedKeys = new Set([
+      'Shift', 'CapsLock', 'Alt', 'AltGraph', 'Control', 'Meta',
+      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+      'Home', 'End', 'PageUp', 'PageDown', 'Insert', 'Escape',
+      'Enter', 'Tab',
+    ]);
 
-    if (event.key === 'Enter' || event.key === 'Tab') {
+    if ((event.ctrlKey || event.metaKey) && ['a', 'c', 'v'].includes(lowerKey)) {
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey || event.altKey || blockedKeys.has(event.key)) {
       event.preventDefault();
       return;
     }
@@ -326,10 +337,16 @@ export default function DNAManipulator() {
       return;
     }
 
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key.length !== 1) {
+      event.preventDefault();
+      return;
+    }
 
-    const normalized = normalizeBases(event.key);
-    if (!normalized) return;
+    const normalized = BASE_MAP[event.key];
+    if (!normalized) {
+      event.preventDefault();
+      return;
+    }
 
     event.preventDefault();
     const { next, caret } = overwriteSequence(currentSequence, start, end, normalized);
@@ -396,16 +413,6 @@ export default function DNAManipulator() {
     editorBackdropRef.current.scrollLeft = event.currentTarget.scrollLeft;
   };
 
-  const getChangedPositions = (): number[] => {
-    if (!selectedRegion) return [];
-    const snvSeq = snvSequences[selectedRegion.region_id] || '';
-    const changes: number[] = [];
-    for (let i = 0; i < currentSequence.length; i += 1) {
-      if (currentSequence[i] !== snvSeq[i]) changes.push(i);
-    }
-    return changes;
-  };
-
 
   const handleNextStep = () => {
     const step2Data = {
@@ -433,7 +440,6 @@ export default function DNAManipulator() {
     return snvPos >= region.gene_start_idx && snvPos <= region.gene_end_idx;
   };
 
-  const changedPositions = getChangedPositions();
   const currentOriginalSequence = selectedRegion ? originalSequences[selectedRegion.region_id] || '' : '';
   const currentSeedSequence = selectedRegion ? snvSequences[selectedRegion.region_id] || '' : '';
   const differenceSummary = useMemo(() => {
@@ -639,8 +645,8 @@ export default function DNAManipulator() {
                       </p>
                     </div>
                   </div>
-                  {changedPositions.length > 0 && (
-                    <p className="mt-3 text-sm text-rose-800">⚠️ disease seed 서열과 비교해 {changedPositions.length}개 위치가 변경되었습니다.</p>
+                  {differenceSummary.toReference > 0 && (
+                    <p className="mt-3 text-sm text-rose-800">⚠️ 정상 서열(Reference)과 비교해 {differenceSummary.toReference}개 위치가 다릅니다.</p>
                   )}
                 </>
               )}
