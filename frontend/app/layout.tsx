@@ -27,8 +27,6 @@ export default function RootLayout({
             loading="eager"
             allow="autoplay; fullscreen"
           />
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.24)_0%,rgba(2,6,23,0.40)_100%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),transparent_42%),radial-gradient(circle_at_bottom,rgba(56,189,248,0.10),transparent_38%)]" />
         </div>
         <div className="relative z-10">{children}</div>
       </body>

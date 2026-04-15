@@ -38,6 +38,27 @@ const MOLSTAR_STYLE_HREF = '/vendor/molstar/molstar.css';
 const DEFAULT_PRIMARY_COLOR = 0x22c55e;
 const DEFAULT_SECONDARY_COLOR = 0xef4444;
 
+function isBinaryFormat(format?: MolstarFormat | null) {
+  return (format || 'mmcif') === 'bcif';
+}
+
+function buildIframeViewerUrl(input: MolstarStructureInput) {
+  const format = (input.format || 'mmcif').toLowerCase();
+  const params = new URLSearchParams({
+    'hide-controls': '1',
+    'collapse-left-panel': '1',
+    'show-toggle-fullscreen': '0',
+    'structure-url': input.url || '',
+    'structure-url-format': format,
+  });
+
+  if (isBinaryFormat(input.format)) {
+    params.set('structure-url-is-binary', '1');
+  }
+
+  return `/vendor/molstar/index.html?${params.toString()}`;
+}
+
 async function ensureMolstarStyle() {
   if (typeof window === 'undefined') return;
   if (document.getElementById(MOLSTAR_STYLE_ID)) return;
@@ -230,7 +251,16 @@ export default function MolstarViewer({
   }, [onComputedComparison]);
 
   useEffect(() => {
-    if (!containerRef.current || !primary?.url) return;
+    if (mode === 'single') {
+      pluginRef.current?.dispose?.();
+      pluginRef.current = null;
+      signatureRef.current = buildSignature(mode, primary, secondary);
+      setViewerError(null);
+      comparisonCallbackRef.current?.(null);
+      return;
+    }
+
+    if (!containerRef.current || !primary?.url || !secondary?.url) return;
 
     let disposed = false;
 
@@ -282,66 +312,56 @@ export default function MolstarViewer({
 
         await plugin.clear();
 
-        if (mode === 'overlay' && secondary?.url) {
-          const primaryLoaded = await loadStructure(plugin, modules, primary);
-          const secondaryLoaded = await loadStructure(plugin, modules, secondary);
+        const primaryLoaded = await loadStructure(plugin, modules, primary);
+        const secondaryLoaded = await loadStructure(plugin, modules, secondary);
 
-          const primaryLoci = tryCreateCaLoci(modules, primaryLoaded.structure, primary.chainId);
-          const secondaryLoci = tryCreateCaLoci(modules, secondaryLoaded.structure, secondary.chainId);
+        const primaryLoci = tryCreateCaLoci(modules, primaryLoaded.structure, primary.chainId);
+        const secondaryLoci = tryCreateCaLoci(modules, secondaryLoaded.structure, secondary.chainId);
 
-          let comparison: MolstarComputedComparison | null = null;
-          if (primaryLoci && secondaryLoci) {
-            const result = modules.tmAlign(primaryLoci, secondaryLoci);
-            await applyTransform(plugin, modules, secondaryLoaded.structure, result.bTransform);
-            comparison = {
-              method: 'tm-align',
-              tm_score_1: result.tmScoreA,
-              tm_score_2: result.tmScoreB,
-              rmsd: result.rmsd,
-              aligned_length: result.alignedLength,
-              note: 'frontend TM-align overlay',
-            };
-          } else {
-            comparison = {
-              method: 'unavailable',
-              note: 'C-alpha selection을 만들지 못해 overlay alignment를 생략했습니다.',
-            };
-          }
-
-          await addCartoonRepresentation(
-            plugin,
-            modules,
-            primaryLoaded.structure,
-            { ...primary, color: primary.color ?? DEFAULT_PRIMARY_COLOR },
-            primary.label || 'Normal Structure',
-            DEFAULT_PRIMARY_COLOR
-          );
-          await addCartoonRepresentation(
-            plugin,
-            modules,
-            secondaryLoaded.structure,
-            { ...secondary, color: secondary.color ?? DEFAULT_SECONDARY_COLOR },
-            secondary.label || 'User Structure',
-            DEFAULT_SECONDARY_COLOR
-          );
-
-          if (!disposed) comparisonCallbackRef.current?.(comparison);
+        let comparison: MolstarComputedComparison | null = null;
+        if (primaryLoci && secondaryLoci) {
+          const result = modules.tmAlign(primaryLoci, secondaryLoci);
+          await applyTransform(plugin, modules, secondaryLoaded.structure, result.bTransform);
+          comparison = {
+            method: 'tm-align',
+            tm_score_1: result.tmScoreA,
+            tm_score_2: result.tmScoreB,
+            rmsd: result.rmsd,
+            aligned_length: result.alignedLength,
+            note: 'frontend TM-align overlay',
+          };
         } else {
-          const loaded = await loadStructure(plugin, modules, primary);
-          await addCartoonRepresentation(
-            plugin,
-            modules,
-            loaded.structure,
-            { ...primary, color: primary.color ?? DEFAULT_PRIMARY_COLOR },
-            primary.label || 'Protein Structure',
-            DEFAULT_PRIMARY_COLOR
-          );
-          if (!disposed) comparisonCallbackRef.current?.(null);
+          comparison = {
+            method: 'unavailable',
+            note: 'C-alpha selection을 만들지 못해 overlay alignment를 생략했습니다.',
+          };
         }
+
+        await addCartoonRepresentation(
+          plugin,
+          modules,
+          primaryLoaded.structure,
+          { ...primary, color: primary.color ?? DEFAULT_PRIMARY_COLOR },
+          primary.label || 'Normal Structure',
+          DEFAULT_PRIMARY_COLOR
+        );
+        await addCartoonRepresentation(
+          plugin,
+          modules,
+          secondaryLoaded.structure,
+          { ...secondary, color: secondary.color ?? DEFAULT_SECONDARY_COLOR },
+          secondary.label || 'User Structure',
+          DEFAULT_SECONDARY_COLOR
+        );
+
+        if (!disposed) comparisonCallbackRef.current?.(comparison);
       } catch (error) {
         if (!disposed) {
           setViewerError(formatViewerError(error));
-          comparisonCallbackRef.current?.(null);
+          comparisonCallbackRef.current?.({
+            method: 'unavailable',
+            note: 'overlay 비교를 계산하지 못했습니다. baseline 구조만 확인하세요.',
+          });
         }
       }
     };
@@ -380,6 +400,22 @@ export default function MolstarViewer({
     );
   }
 
+  if (mode === 'single') {
+    const iframeSrc = buildIframeViewerUrl(primary);
+    return (
+      <div className="overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)]">
+        <iframe
+          key={iframeSrc}
+          title={primary.label || 'Protein Structure'}
+          src={iframeSrc}
+          className="h-[560px] w-full border-0"
+          loading="eager"
+          allow="fullscreen"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)]">
       <div ref={containerRef} className="h-[560px] w-full" />
@@ -388,7 +424,7 @@ export default function MolstarViewer({
           {viewerError}
         </div>
       )}
-      {mode === 'overlay' && secondary?.url ? (
+      {secondary?.url ? (
         <div className="flex flex-wrap gap-3 border-t border-white/10 px-4 py-3 text-xs text-slate-200">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
