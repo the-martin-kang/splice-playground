@@ -107,7 +107,11 @@ function createExpression(MS: any, chainId?: string | null, atomName?: string | 
   return MS.struct.generator.atomGroups(params);
 }
 
-async function loadStructure(plugin: any, modules: Awaited<ReturnType<typeof importMolstarModules>>, input: MolstarStructureInput) {
+async function loadStructure(
+  plugin: any,
+  modules: Awaited<ReturnType<typeof importMolstarModules>>,
+  input: MolstarStructureInput
+) {
   const format = (input.format || 'mmcif') as MolstarFormat;
   const isBinary = format === 'bcif';
   if (!input.url) throw new Error('구조 URL이 없습니다.');
@@ -148,7 +152,11 @@ async function addCartoonRepresentation(
   return target;
 }
 
-function tryCreateCaLoci(modules: Awaited<ReturnType<typeof importMolstarModules>>, structureCell: any, chainId?: string | null) {
+function tryCreateCaLoci(
+  modules: Awaited<ReturnType<typeof importMolstarModules>>,
+  structureCell: any,
+  chainId?: string | null
+) {
   const data = structureCell?.cell?.obj?.data ?? structureCell?.obj?.data;
   if (!data) return null;
 
@@ -162,7 +170,12 @@ function tryCreateCaLoci(modules: Awaited<ReturnType<typeof importMolstarModules
   return attempt(chainId) || attempt(null);
 }
 
-async function applyTransform(plugin: any, modules: Awaited<ReturnType<typeof importMolstarModules>>, structureCell: any, matrix: any) {
+async function applyTransform(
+  plugin: any,
+  modules: Awaited<ReturnType<typeof importMolstarModules>>,
+  structureCell: any,
+  matrix: any
+) {
   const update = plugin.state.data
     .build()
     .to(structureCell)
@@ -172,6 +185,34 @@ async function applyTransform(plugin: any, modules: Awaited<ReturnType<typeof im
   await plugin.runTask(plugin.state.data.updateTree(update));
 }
 
+function buildSignature(
+  mode: 'single' | 'overlay',
+  primary: MolstarStructureInput | null,
+  secondary?: MolstarStructureInput | null
+) {
+  return JSON.stringify({
+    mode,
+    primary: primary
+      ? {
+          url: primary.url,
+          format: primary.format,
+          label: primary.label,
+          chainId: primary.chainId,
+          color: primary.color,
+        }
+      : null,
+    secondary: secondary
+      ? {
+          url: secondary.url,
+          format: secondary.format,
+          label: secondary.label,
+          chainId: secondary.chainId,
+          color: secondary.color,
+        }
+      : null,
+  });
+}
+
 export default function MolstarViewer({
   primary,
   secondary,
@@ -179,13 +220,19 @@ export default function MolstarViewer({
   onComputedComparison,
 }: MolstarViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const pluginRef = useRef<any>(null);
+  const signatureRef = useRef<string>('');
+  const comparisonCallbackRef = useRef<typeof onComputedComparison>(onComputedComparison);
   const [viewerError, setViewerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    comparisonCallbackRef.current = onComputedComparison;
+  }, [onComputedComparison]);
 
   useEffect(() => {
     if (!containerRef.current || !primary?.url) return;
 
     let disposed = false;
-    let plugin: any = null;
 
     const loadViewer = async () => {
       try {
@@ -194,9 +241,16 @@ export default function MolstarViewer({
         const modules = await importMolstarModules();
         if (disposed || !containerRef.current) return;
 
-        containerRef.current.innerHTML = '';
+        const nextSignature = buildSignature(mode, primary, secondary);
+        if (pluginRef.current && signatureRef.current === nextSignature) {
+          return;
+        }
 
-        plugin = await modules.createPluginUI({
+        pluginRef.current?.dispose?.();
+        containerRef.current.innerHTML = '';
+        signatureRef.current = nextSignature;
+
+        const plugin = await modules.createPluginUI({
           target: containerRef.current,
           render: modules.renderReact18,
           spec: {
@@ -224,6 +278,7 @@ export default function MolstarViewer({
             },
           },
         });
+        pluginRef.current = plugin;
 
         await plugin.clear();
 
@@ -270,7 +325,7 @@ export default function MolstarViewer({
             DEFAULT_SECONDARY_COLOR
           );
 
-          if (!disposed) onComputedComparison?.(comparison);
+          if (!disposed) comparisonCallbackRef.current?.(comparison);
         } else {
           const loaded = await loadStructure(plugin, modules, primary);
           await addCartoonRepresentation(
@@ -281,12 +336,12 @@ export default function MolstarViewer({
             primary.label || 'Protein Structure',
             DEFAULT_PRIMARY_COLOR
           );
-          if (!disposed) onComputedComparison?.(null);
+          if (!disposed) comparisonCallbackRef.current?.(null);
         }
       } catch (error) {
         if (!disposed) {
           setViewerError(formatViewerError(error));
-          onComputedComparison?.(null);
+          comparisonCallbackRef.current?.(null);
         }
       }
     };
@@ -295,9 +350,9 @@ export default function MolstarViewer({
 
     return () => {
       disposed = true;
-      plugin?.dispose?.();
     };
   }, [
+    mode,
     primary?.url,
     primary?.format,
     primary?.label,
@@ -308,9 +363,14 @@ export default function MolstarViewer({
     secondary?.label,
     secondary?.chainId,
     secondary?.color,
-    mode,
-    onComputedComparison,
   ]);
+
+  useEffect(() => {
+    return () => {
+      pluginRef.current?.dispose?.();
+      pluginRef.current = null;
+    };
+  }, []);
 
   if (!primary?.url) {
     return (

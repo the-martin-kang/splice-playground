@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MolstarViewer, { MolstarComputedComparison, MolstarStructureInput } from './MolstarViewer';
 
@@ -178,7 +178,6 @@ function formatNumber(value?: number | null, digits = 2) {
 
 function statusClassName(status: string) {
   const normalized = status.toLowerCase();
-
   if (['completed', 'succeeded', 'success'].includes(normalized)) {
     return 'border-emerald-300/40 bg-emerald-100/15 text-emerald-50';
   }
@@ -218,6 +217,106 @@ function extractApiMessage(payload: unknown) {
   return null;
 }
 
+function mergeMolstarTarget(previous: MolstarTarget | null, next: MolstarTarget | null) {
+  if (!next?.url) return previous;
+  if (
+    previous &&
+    previous.structure_asset_id &&
+    next.structure_asset_id &&
+    previous.structure_asset_id === next.structure_asset_id
+  ) {
+    return previous;
+  }
+  return next;
+}
+
+function buildJobProgress(
+  job: Step4StructureJob | null,
+  step4Data: Step4StateResponse | null,
+  userStructureReady: boolean
+) {
+  if (!step4Data) return null;
+  if (!step4Data.capabilities.structure_prediction_enabled) {
+    return {
+      tone: 'slate' as const,
+      title: '구조 예측이 현재 비활성화되어 있습니다.',
+      body:
+        step4Data.user_track.structure_prediction_message ||
+        step4Data.capabilities.reason ||
+        '현재는 정상 구조만 표시합니다.',
+    };
+  }
+
+  if (!job) {
+    if (step4Data.user_track.recommended_structure_strategy === 'reuse_baseline') {
+      return {
+        tone: 'emerald' as const,
+        title: '정상 구조를 그대로 재사용합니다.',
+        body: '현재 생성된 단백질이 정상 단백질과 동일해 추가 ColabFold 예측이 필요하지 않습니다.',
+      };
+    }
+    return {
+      tone: 'amber' as const,
+      title: 'ColabFold 예측 대기 중',
+      body: '구조 예측 job이 아직 생성되지 않았습니다. 보통 1~2분 정도 걸리며, 단백질이 길면 더 오래 걸릴 수 있습니다.',
+    };
+  }
+
+  const status = job.status.toLowerCase();
+  const startedAt = job.created_at ? new Date(job.created_at).getTime() : null;
+  const elapsedSeconds = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : null;
+  const elapsedText = elapsedSeconds != null ? `경과 ${elapsedSeconds}s` : null;
+
+  if (userStructureReady || ['succeeded', 'completed', 'success'].includes(status)) {
+    return {
+      tone: 'emerald' as const,
+      title: 'ColabFold 예측이 완료되었습니다.',
+      body: '정상 구조와 생성 구조를 서로 다른 색으로 overlay해 비교할 수 있습니다.',
+      meta: elapsedText,
+    };
+  }
+
+  if (['failed', 'error', 'cancelled'].includes(status)) {
+    return {
+      tone: 'rose' as const,
+      title: 'ColabFold 예측이 실패했습니다.',
+      body: job.error_message || 'worker 로그를 확인해 주세요.',
+      meta: elapsedText,
+    };
+  }
+
+  if (status === 'running') {
+    return {
+      tone: 'amber' as const,
+      title: 'ColabFold가 단백질 구조를 예측 중입니다…',
+      body: '현재 Mol* 창은 정상 구조를 유지합니다. 예측이 끝나면 새 구조를 자동으로 overlay 비교 모드로 보여줍니다. 보통 1~2분 정도 걸리며, 큰 단백질은 더 오래 걸릴 수 있습니다.',
+      meta: elapsedText,
+      spinning: true,
+    };
+  }
+
+  return {
+    tone: 'amber' as const,
+    title: '예측 job이 큐에 들어가 있습니다.',
+    body: 'worker가 구조 예측을 시작하면 상태가 running으로 바뀝니다. 보통 1~2분 정도 걸릴 수 있습니다.',
+    meta: elapsedText,
+    spinning: true,
+  };
+}
+
+function progressCardClasses(tone: 'slate' | 'amber' | 'emerald' | 'rose') {
+  switch (tone) {
+    case 'emerald':
+      return 'border-emerald-300/30 bg-emerald-100/10 text-emerald-950';
+    case 'rose':
+      return 'border-rose-300/30 bg-rose-100/10 text-rose-950';
+    case 'amber':
+      return 'border-amber-300/30 bg-amber-100/10 text-amber-950';
+    default:
+      return 'border-black/10 bg-white/10 text-slate-900';
+  }
+}
+
 export default function Step4Protein() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -235,24 +334,37 @@ export default function Step4Protein() {
   const [hasAutoSubmittedJob, setHasAutoSubmittedJob] = useState(false);
   const [activeStructureView, setActiveStructureView] = useState<'normal' | 'user' | 'overlay'>('normal');
   const [frontendStructureComparison, setFrontendStructureComparison] = useState<Step4StructureComparison | null>(null);
+  const [stableNormalTarget, setStableNormalTarget] = useState<MolstarTarget | null>(null);
+  const [stableUserTarget, setStableUserTarget] = useState<MolstarTarget | null>(null);
+  const hasInitializedViewRef = useRef(false);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('step3Data');
       if (!saved) return;
-
-      const parsed = JSON.parse(saved) as {
-        diseaseDetail?: { disease?: { disease_name?: string } };
-      };
+      const parsed = JSON.parse(saved) as { diseaseDetail?: { disease?: { disease_name?: string } } };
       setDiseaseName(parsed.diseaseDetail?.disease?.disease_name || null);
     } catch {
       setDiseaseName(null);
     }
   }, []);
 
+  const handleComputedComparison = useCallback((nextComparison: MolstarComputedComparison | null) => {
+    if (!nextComparison) {
+      setFrontendStructureComparison(null);
+      return;
+    }
+    setFrontendStructureComparison({
+      method: nextComparison.method,
+      tm_score_1: nextComparison.tm_score_1 ?? null,
+      tm_score_2: nextComparison.tm_score_2 ?? null,
+      rmsd: nextComparison.rmsd ?? null,
+      aligned_length: nextComparison.aligned_length ?? null,
+    });
+  }, []);
+
   const fetchStep4 = async (showLoading = true) => {
     if (!stateId) return;
-
     if (showLoading) setIsLoading(true);
     setError(null);
 
@@ -260,21 +372,23 @@ export default function Step4Protein() {
       const response = await fetch(
         `${API_BASE_URL}/api/states/${encodeURIComponent(stateId)}/step4?include_sequences=false`
       );
-
       const payload = await response.json().catch(() => null);
-
       if (!response.ok) {
         throw new Error(extractApiMessage(payload) || `HTTP error! status: ${response.status}`);
       }
 
       const data = payload as Step4StateResponse;
       setStep4Data(data);
-      setJob(data.user_track.latest_structure_job || null);
+      setJob((prev) => data.user_track.latest_structure_job || prev);
+      setStableNormalTarget((prev) => mergeMolstarTarget(prev, data.normal_track.molstar_default || null));
+      setStableUserTarget((prev) =>
+        mergeMolstarTarget(prev, data.user_track.latest_structure_job?.molstar_default || null)
+      );
 
-      if (data.user_track.latest_structure_job?.molstar_default?.url) {
-        setActiveStructureView('user');
-      } else {
-        setActiveStructureView('normal');
+      if (!hasInitializedViewRef.current) {
+        const hasUser = Boolean(data.user_track.latest_structure_job?.molstar_default?.url);
+        setActiveStructureView(hasUser ? 'overlay' : 'normal');
+        hasInitializedViewRef.current = true;
       }
     } catch (fetchError) {
       setError(formatError(fetchError));
@@ -289,56 +403,37 @@ export default function Step4Protein() {
       setIsLoading(false);
       return;
     }
-
-    fetchStep4(true);
+    void fetchStep4(true);
   }, [diseaseId, stateId]);
 
   const createStructureJob = async () => {
     if (!stateId) return;
-
     setIsSubmittingJob(true);
     setJobError(null);
     setJobMessage(null);
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/states/${encodeURIComponent(stateId)}/step4/jobs`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            provider: 'colabfold',
-            force: false,
-            reuse_if_identical: true,
-          }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/states/${encodeURIComponent(stateId)}/step4/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'colabfold', force: false, reuse_if_identical: true }),
+      });
 
       const payload = (await response.json().catch(() => null)) as CreateJobResponse | null;
-
       if (!response.ok) {
         throw new Error(extractApiMessage(payload) || `HTTP error! status: ${response.status}`);
       }
 
       if (payload?.message) setJobMessage(payload.message);
-
       if (payload?.user_track && step4Data) {
-        setStep4Data({
-          ...step4Data,
-          user_track: payload.user_track,
-        });
+        setStep4Data({ ...step4Data, user_track: payload.user_track });
       }
-
       if (payload?.job) {
         setJob(payload.job);
-
+        setStableUserTarget((prev) => mergeMolstarTarget(prev, payload.job?.molstar_default || null));
         if (payload.job.molstar_default?.url) {
           setActiveStructureView('overlay');
         }
-      } else {
-        await fetchStep4(false);
       }
     } catch (submitError) {
       setJobError(formatError(submitError));
@@ -367,20 +462,14 @@ export default function Step4Protein() {
           `${API_BASE_URL}/api/step4-jobs/${encodeURIComponent(job.job_id)}?include_payload=false`
         );
         const payload = await response.json().catch(() => null);
-
         if (!response.ok) {
           throw new Error(extractApiMessage(payload) || `HTTP error! status: ${response.status}`);
         }
-
         const refreshedJob = payload as Step4StructureJob;
-        setJob(refreshedJob);
-
+        setJob((prev) => ({ ...(prev || {}), ...refreshedJob } as Step4StructureJob));
         if (refreshedJob.molstar_default?.url) {
+          setStableUserTarget((prev) => mergeMolstarTarget(prev, refreshedJob.molstar_default || null));
           setActiveStructureView('overlay');
-        }
-
-        if (isTerminalJob(refreshedJob)) {
-          await fetchStep4(false);
         }
       } catch (pollError) {
         setJobError(formatError(pollError));
@@ -419,9 +508,8 @@ export default function Step4Protein() {
 
   const comparison = step4Data.user_track.comparison_to_normal;
   const translation = step4Data.user_track.translation_sanity;
-  const normalStructureTarget = step4Data.normal_track.molstar_default || null;
-  const userStructureTarget =
-    job?.molstar_default || step4Data.user_track.latest_structure_job?.molstar_default || null;
+  const normalStructureTarget = stableNormalTarget;
+  const userStructureTarget = stableUserTarget;
 
   const normalViewerTarget: MolstarStructureInput | null = normalStructureTarget?.url
     ? {
@@ -436,10 +524,7 @@ export default function Step4Protein() {
   const overlaySecondary = userStructureTarget?.url
     ? userStructureTarget
     : comparison.same_as_normal && normalStructureTarget?.url
-      ? {
-          ...normalStructureTarget,
-          title: 'User Structure (baseline reuse)',
-        }
+      ? { ...normalStructureTarget, title: 'User Structure (baseline reuse)' }
       : null;
 
   const userViewerTarget: MolstarStructureInput | null = overlaySecondary?.url
@@ -465,8 +550,14 @@ export default function Step4Protein() {
         }
       : null);
 
+  const structureSimilarityScore = structureComparison
+    ? Math.max(structureComparison.tm_score_1 ?? 0, structureComparison.tm_score_2 ?? 0)
+    : null;
+
   const singleDisplayedTarget =
     activeStructureView === 'user' && userViewerTarget ? userViewerTarget : normalViewerTarget;
+
+  const progress = buildJobProgress(job, step4Data, Boolean(userViewerTarget?.url));
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-transparent px-4 py-8 pb-16 sm:px-6 lg:px-8">
@@ -475,53 +566,34 @@ export default function Step4Protein() {
           <div className="mb-4 inline-flex rounded-[14px] border border-black/10 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-slate-800">
             Splice Playground
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-            4. Protein Structure
-          </h1>
+          <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">4. Protein Structure</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-800 sm:text-base">
             {diseaseName || step4Data.disease_id}의 정상 단백질 구조와 사용자 편집 상태에서 예측된 단백질 결과를 비교합니다.
           </p>
           <div className="mt-6 flex flex-wrap gap-3 text-xs text-slate-800">
-            <span className="rounded-[12px] border border-black/10 bg-white/10 px-3 py-1">
-              Gene: {step4Data.gene_symbol || step4Data.gene_id}
-            </span>
-            <span className="rounded-[12px] border border-black/10 bg-white/10 px-3 py-1">
-              State: {step4Data.state_id}
-            </span>
-            <span className="rounded-[12px] border border-black/10 bg-white/10 px-3 py-1">
-              Strategy: {step4Data.user_track.recommended_structure_strategy}
-            </span>
+            <span className="rounded-[12px] border border-black/10 bg-white/10 px-3 py-1">Gene: {step4Data.gene_symbol || step4Data.gene_id}</span>
+            <span className="rounded-[12px] border border-black/10 bg-white/10 px-3 py-1">State: {step4Data.state_id}</span>
+            <span className="rounded-[12px] border border-black/10 bg-white/10 px-3 py-1">Strategy: {step4Data.user_track.recommended_structure_strategy}</span>
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[18px] border border-white/16 bg-white/5 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Normal Protein</p>
-            <p className="mt-3 text-3xl font-black text-slate-950">
-              {comparison.normal_protein_length}
-              <span className="ml-2 text-sm font-semibold text-slate-600">aa</span>
-            </p>
+            <p className="mt-3 text-3xl font-black text-slate-950">{comparison.normal_protein_length}<span className="ml-2 text-sm font-semibold text-slate-600">aa</span></p>
           </div>
           <div className="rounded-[18px] border border-white/16 bg-white/5 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-600">User Protein</p>
-            <p className="mt-3 text-3xl font-black text-slate-950">
-              {comparison.user_protein_length}
-              <span className="ml-2 text-sm font-semibold text-slate-600">aa</span>
-            </p>
+            <p className="mt-3 text-3xl font-black text-slate-950">{comparison.user_protein_length}<span className="ml-2 text-sm font-semibold text-slate-600">aa</span></p>
           </div>
           <div className="rounded-[18px] border border-white/16 bg-white/5 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Length Delta</p>
-            <p className="mt-3 text-3xl font-black text-slate-950">
-              {comparison.length_delta_aa > 0 ? '+' : ''}
-              {comparison.length_delta_aa}
-              <span className="ml-2 text-sm font-semibold text-slate-600">aa</span>
-            </p>
+            <p className="mt-3 text-3xl font-black text-slate-950">{comparison.length_delta_aa > 0 ? '+' : ''}{comparison.length_delta_aa}<span className="ml-2 text-sm font-semibold text-slate-600">aa</span></p>
           </div>
           <div className="rounded-[18px] border border-white/16 bg-white/5 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-600">AA Similarity</p>
-            <p className="mt-3 text-3xl font-black text-slate-950">
-              {formatPercent(comparison.normalized_edit_similarity)}
-            </p>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Structure Similarity</p>
+            <p className="mt-3 text-3xl font-black text-slate-950">{formatPercent(structureSimilarityScore)}</p>
+            <p className="mt-2 text-xs text-slate-600">TM-score max 기준 · AA 유사도 {formatPercent(comparison.normalized_edit_similarity)}</p>
           </div>
         </section>
 
@@ -530,40 +602,26 @@ export default function Step4Protein() {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black text-slate-950">Mol* Structure Viewer</h2>
-                <p className="mt-1 text-sm text-slate-800">
-                  단일 구조 보기와, 실제 좌표를 TM-align 기반으로 겹쳐 보는 overlay 비교를 모두 지원합니다.
-                </p>
+                <p className="mt-1 text-sm text-slate-800">정상 구조는 초록, 생성 구조는 빨강으로 표시하며, overlay 모드에서는 브라우저에서 TM-align으로 직접 겹쳐 비교합니다.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveStructureView('normal')}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    activeStructureView === 'normal'
-                      ? 'border-cyan-300/60 bg-cyan-100/12 text-cyan-900'
-                      : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12'
-                  }`}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${activeStructureView === 'normal' ? 'border-cyan-300/60 bg-cyan-100/12 text-cyan-900' : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12'}`}
                 >
                   Normal Structure
                 </button>
                 <button
                   onClick={() => setActiveStructureView('user')}
                   disabled={!userViewerTarget}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    activeStructureView === 'user' && userViewerTarget
-                      ? 'border-cyan-300/60 bg-cyan-100/12 text-cyan-900'
-                      : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-40'
-                  }`}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${activeStructureView === 'user' && userViewerTarget ? 'border-cyan-300/60 bg-cyan-100/12 text-cyan-900' : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-40'}`}
                 >
                   User Structure
                 </button>
                 <button
                   onClick={() => setActiveStructureView('overlay')}
                   disabled={!normalViewerTarget || !userViewerTarget}
-                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    activeStructureView === 'overlay' && normalViewerTarget && userViewerTarget
-                      ? 'border-fuchsia-300/60 bg-fuchsia-100/12 text-fuchsia-900'
-                      : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-40'
-                  }`}
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${activeStructureView === 'overlay' && normalViewerTarget && userViewerTarget ? 'border-fuchsia-300/60 bg-fuchsia-100/12 text-fuchsia-900' : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12 disabled:cursor-not-allowed disabled:opacity-40'}`}
                 >
                   Overlay Compare
                 </button>
@@ -571,48 +629,29 @@ export default function Step4Protein() {
             </div>
 
             {activeStructureView === 'overlay' && normalViewerTarget && userViewerTarget ? (
-              <MolstarViewer
-                mode="overlay"
-                primary={normalViewerTarget}
-                secondary={userViewerTarget}
-                onComputedComparison={(nextComparison: MolstarComputedComparison | null) => {
-                  if (!nextComparison) {
-                    setFrontendStructureComparison(null);
-                    return;
-                  }
-                  setFrontendStructureComparison({
-                    method: nextComparison.method,
-                    tm_score_1: nextComparison.tm_score_1 ?? null,
-                    tm_score_2: nextComparison.tm_score_2 ?? null,
-                    rmsd: nextComparison.rmsd ?? null,
-                    aligned_length: nextComparison.aligned_length ?? null,
-                  });
-                }}
-              />
+              <MolstarViewer mode="overlay" primary={normalViewerTarget} secondary={userViewerTarget} onComputedComparison={handleComputedComparison} />
             ) : (
-              <MolstarViewer
-                mode="single"
-                primary={singleDisplayedTarget}
-                onComputedComparison={() => {
-                  if (activeStructureView !== 'overlay') {
-                    setFrontendStructureComparison(null);
-                  }
-                }}
-              />
+              <MolstarViewer mode="single" primary={singleDisplayedTarget} onComputedComparison={handleComputedComparison} />
             )}
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="rounded-[18px] border border-white/16 bg-white/5 p-4 text-sm text-slate-800">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Displayed Asset</p>
                 <p className="mt-2 font-semibold text-slate-950">
-                  {activeStructureView === 'overlay' ? 'Normal + User overlay' : singleDisplayedTarget?.label || '구조 자산 없음'}
+                  {activeStructureView === 'overlay'
+                    ? 'Normal + User overlay'
+                    : singleDisplayedTarget?.label || '구조 자산 없음'}
                 </p>
                 <p className="mt-2 text-slate-700">
-                  {activeStructureView === 'overlay' ? 'TM-align based superposition' : ((activeStructureView === 'user' ? userStructureTarget?.provider : normalStructureTarget?.provider) || '-') + ' / ' + ((activeStructureView === 'user' ? userStructureTarget?.source_db : normalStructureTarget?.source_db) || '-')}
+                  {activeStructureView === 'overlay'
+                    ? 'TM-align based superposition'
+                    : `${activeStructureView === 'user' ? userStructureTarget?.provider || '-' : normalStructureTarget?.provider || '-'} / ${activeStructureView === 'user' ? userStructureTarget?.source_db || '-' : normalStructureTarget?.source_db || '-'}`}
                 </p>
                 <p className="mt-1 text-slate-700">
-                  {activeStructureView === 'overlay' ? `${normalStructureTarget?.source_id || '-'} vs ${overlaySecondary?.source_id || '-'}` : ((activeStructureView === 'user' ? userStructureTarget?.source_id : normalStructureTarget?.source_id) || '-')}
-                  {activeStructureView !== 'overlay' && ((activeStructureView === 'user' ? userStructureTarget?.source_chain_id : normalStructureTarget?.source_chain_id))
+                  {activeStructureView === 'overlay'
+                    ? `${normalStructureTarget?.source_id || '-'} vs ${overlaySecondary?.source_id || '-'}`
+                    : (activeStructureView === 'user' ? userStructureTarget?.source_id : normalStructureTarget?.source_id) || '-'}
+                  {activeStructureView !== 'overlay' && (activeStructureView === 'user' ? userStructureTarget?.source_chain_id : normalStructureTarget?.source_chain_id)
                     ? ` · Chain ${activeStructureView === 'user' ? userStructureTarget?.source_chain_id : normalStructureTarget?.source_chain_id}`
                     : ''}
                 </p>
@@ -621,23 +660,13 @@ export default function Step4Protein() {
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Prediction Job</p>
                 {job ? (
                   <>
-                    <div
-                      className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusClassName(job.status)}`}
-                    >
-                      {job.status}
-                    </div>
+                    <div className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusClassName(job.status)}`}>{job.status}</div>
                     <p className="mt-3 text-slate-700">Provider: {job.provider}</p>
                     <p className="mt-1 text-slate-700">Updated: {formatDateTime(job.updated_at)}</p>
-                    {job.reused_baseline_structure ? (
-                      <p className="mt-3 text-emerald-800">
-                        정상 구조를 재사용하도록 판단된 job입니다.
-                      </p>
-                    ) : null}
+                    {job.reused_baseline_structure ? <p className="mt-3 text-emerald-800">정상 구조를 재사용하도록 판단된 job입니다.</p> : null}
                   </>
                 ) : (
-                  <p className="mt-2 text-slate-700">
-                    아직 사용자 구조 job이 없습니다. 예측 가능하면 자동으로 생성합니다.
-                  </p>
+                  <p className="mt-2 text-slate-700">아직 사용자 구조 job이 없습니다. 예측 가능하면 자동으로 생성합니다.</p>
                 )}
               </div>
             </div>
@@ -648,9 +677,7 @@ export default function Step4Protein() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-black text-slate-950">Translation Summary</h2>
-                  <p className="mt-2 text-sm text-slate-800">
-                    STEP4 API의 `translation_sanity`와 `comparison_to_normal`를 그대로 요약합니다.
-                  </p>
+                  <p className="mt-2 text-sm text-slate-800">STEP4 API의 `translation_sanity`, job status, 구조 비교 결과를 함께 요약합니다.</p>
                 </div>
                 <button
                   onClick={() => fetchStep4(false)}
@@ -660,46 +687,37 @@ export default function Step4Protein() {
                 </button>
               </div>
 
+              {progress ? (
+                <div className={`mt-5 rounded-2xl border px-4 py-4 ${progressCardClasses(progress.tone)}`}>
+                  <div className="flex items-start gap-3">
+                    {progress.spinning ? <div className="mt-0.5 h-5 w-5 animate-spin rounded-full border-2 border-current/25 border-b-current" /> : null}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">{progress.title}</p>
+                      <p className="mt-2 text-sm leading-6">{progress.body}</p>
+                      {progress.meta ? <p className="mt-2 text-xs opacity-80">{progress.meta}</p> : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-5 space-y-3 text-sm text-slate-800">
-                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                  <span>Translation OK</span>
-                  <span className="font-semibold">{translation.translation_ok ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                  <span>Frameshift Likely</span>
-                  <span className="font-semibold">{translation.frameshift_likely ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                  <span>Premature Stop</span>
-                  <span className="font-semibold">{translation.premature_stop_likely ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                  <span>First AA Mismatch</span>
-                  <span className="font-semibold">{comparison.first_mismatch_aa_1 ?? '-'}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                  <span>CDS Length</span>
-                  <span className="font-semibold">{translation.cds_length_nt ?? '-'} nt</span>
-                </div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>Translation OK</span><span className="font-semibold">{translation.translation_ok ? 'Yes' : 'No'}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>Frameshift Likely</span><span className="font-semibold">{translation.frameshift_likely ? 'Yes' : 'No'}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>Premature Stop</span><span className="font-semibold">{translation.premature_stop_likely ? 'Yes' : 'No'}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>First AA Mismatch</span><span className="font-semibold">{comparison.first_mismatch_aa_1 ?? '-'}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>CDS Length</span><span className="font-semibold">{translation.cds_length_nt ?? '-'} nt</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>AA Similarity</span><span className="font-semibold">{formatPercent(comparison.normalized_edit_similarity)}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>3D Similarity (TM-score max)</span><span className="font-semibold">{formatPercent(structureSimilarityScore)}</span></div>
               </div>
 
               {(jobMessage || jobError) && (
                 <div className="mt-5 space-y-3">
-                  {jobMessage ? (
-                    <div className="rounded-2xl border border-emerald-300/25 bg-emerald-100/10 px-4 py-3 text-sm text-emerald-900">
-                      {jobMessage}
-                    </div>
-                  ) : null}
-                  {jobError ? (
-                    <div className="rounded-2xl border border-rose-300/25 bg-rose-100/10 px-4 py-3 text-sm text-rose-900">
-                      {jobError}
-                    </div>
-                  ) : null}
+                  {jobMessage ? <div className="rounded-2xl border border-emerald-300/25 bg-emerald-100/10 px-4 py-3 text-sm text-emerald-900">{jobMessage}</div> : null}
+                  {jobError ? <div className="rounded-2xl border border-rose-300/25 bg-rose-100/10 px-4 py-3 text-sm text-rose-900">{jobError}</div> : null}
                 </div>
               )}
 
-              {step4Data.user_track.recommended_structure_strategy === 'predict_user_structure' &&
-              !userStructureTarget ? (
+              {step4Data.user_track.recommended_structure_strategy === 'predict_user_structure' && !userViewerTarget ? (
                 <div className="mt-5">
                   <button
                     onClick={createStructureJob}
@@ -718,11 +736,7 @@ export default function Step4Protein() {
                 {step4Data.user_track.predicted_transcript.blocks.map((block) => (
                   <div
                     key={block.block_id}
-                    className={`rounded-full border px-3 py-2 text-xs font-semibold ${
-                      block.block_kind === 'pseudo_exon'
-                        ? 'border-amber-300/35 bg-amber-100/10 text-amber-900'
-                        : 'border-white/14 bg-white/5 text-slate-800'
-                    }`}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold ${block.block_kind === 'pseudo_exon' ? 'border-amber-300/35 bg-amber-100/10 text-amber-900' : 'border-white/14 bg-white/5 text-slate-800'}`}
                   >
                     {block.label} · {block.length} nt
                   </div>
@@ -733,28 +747,12 @@ export default function Step4Protein() {
             {structureComparison ? (
               <section className="rounded-[24px] border border-white/18 bg-white/5 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-lg">
                 <h2 className="text-xl font-black text-slate-950">Structure Comparison (3D)</h2>
-                {structureComparison?.method ? (
-                  <div className="mb-3 rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-xs text-slate-700">
-                    Method: {structureComparison.method}
-                  </div>
-                ) : null}
+                {structureComparison?.method ? <div className="mb-3 rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-xs text-slate-700">Method: {structureComparison.method}</div> : null}
                 <div className="mt-4 space-y-3 text-sm text-slate-800">
-                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                    <span>TM-score 1</span>
-                    <span className="font-semibold">{formatNumber(structureComparison.tm_score_1, 3)}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                    <span>TM-score 2</span>
-                    <span className="font-semibold">{formatNumber(structureComparison.tm_score_2, 3)}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                    <span>RMSD</span>
-                    <span className="font-semibold">{formatNumber(structureComparison.rmsd, 3)}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3">
-                    <span>Aligned Length</span>
-                    <span className="font-semibold">{structureComparison.aligned_length ?? '-'}</span>
-                  </div>
+                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>TM-score 1</span><span className="font-semibold">{formatNumber(structureComparison.tm_score_1, 3)}</span></div>
+                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>TM-score 2</span><span className="font-semibold">{formatNumber(structureComparison.tm_score_2, 3)}</span></div>
+                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>RMSD</span><span className="font-semibold">{formatNumber(structureComparison.rmsd, 3)}</span></div>
+                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>Aligned Length</span><span className="font-semibold">{structureComparison.aligned_length ?? '-'}</span></div>
                 </div>
               </section>
             ) : null}
