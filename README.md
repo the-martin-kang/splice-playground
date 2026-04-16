@@ -3,7 +3,7 @@
 - Project: Capstone Project (Graduation Project)
 - Team: AI Section 1, Team 4
 - Timeline: 2025.9–2026.7
-- Idea: https://youtu.be/jHdRVvbMIxs
+- Idea: https://youtu.be/GtntQUcu39I
 
 ## User Interface
 <img width="10799" height="6728" alt="Image" src="https://github.com/user-attachments/assets/73f9ad0f-6957-40f3-836d-355cd7cc67f0" />
