@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../lib/api';
 
 // 타입 정의
 interface Edit {
@@ -55,6 +54,7 @@ interface DiseaseDetail {
     disease_id: string;
     disease_name: string;
     gene_id: string;
+    seed_mode?: string | null;
   };
   gene: {
     gene_id: string;
@@ -80,6 +80,98 @@ interface Step2Data {
   editedSequences: { [regionId: string]: string };
   originalSequences: { [regionId: string]: string };
   snvSequences: { [regionId: string]: string };
+}
+
+interface MutantTranscriptBlock {
+  key: string;
+  kind: 'canonical' | 'pseudo_exon';
+  exonNumber?: number;
+  label: string;
+  state?: 'normal' | 'excluded' | 'shifted';
+}
+
+function uniqueNumbers(values: number[] = []) {
+  return Array.from(new Set(values));
+}
+
+function getPrimaryEvent(splicingResult: SplicingResponse | null): InterpretedEvent | null {
+  if (!splicingResult?.interpreted_events?.length) return null;
+
+  const primaryType = splicingResult.frontend_summary?.primary_event_type;
+  const primarySubtype = splicingResult.frontend_summary?.primary_subtype;
+
+  if (!primaryType) {
+    return splicingResult.interpreted_events[0] || null;
+  }
+
+  return (
+    splicingResult.interpreted_events.find((event) => {
+      if (event.event_type !== primaryType) return false;
+      if (primarySubtype && event.subtype) return event.subtype === primarySubtype;
+      return true;
+    }) || splicingResult.interpreted_events[0] || null
+  );
+}
+
+function getBaseSequenceForRegion(step2Data: Step2Data, regionId: string) {
+  const original = step2Data.originalSequences[regionId] || '';
+  const snv = step2Data.snvSequences[regionId] || original;
+  const seedMode = step2Data.diseaseDetail.disease.seed_mode || 'apply_alt';
+  return seedMode === 'reference_is_current' ? original : snv;
+}
+
+function buildMutantTranscriptBlocks(normalExons: number[], primaryEvent: InterpretedEvent | null) {
+  const baseBlocks: MutantTranscriptBlock[] = normalExons.map((exonNum) => ({
+    key: `canonical-${exonNum}`,
+    kind: 'canonical',
+    exonNumber: exonNum,
+    label: `Exon${exonNum}`,
+    state: 'normal',
+  }));
+
+  if (!primaryEvent) return baseBlocks;
+
+  if (primaryEvent.event_type === 'EXON_EXCLUSION') {
+    const excluded = new Set(primaryEvent.affected_exon_numbers || []);
+    return baseBlocks.map((block) =>
+      block.exonNumber && excluded.has(block.exonNumber)
+        ? { ...block, state: 'excluded' }
+        : block
+    );
+  }
+
+  if (primaryEvent.event_type === 'BOUNDARY_SHIFT') {
+    const shifted = new Set(primaryEvent.affected_exon_numbers || []);
+    return baseBlocks.map((block) =>
+      block.exonNumber && shifted.has(block.exonNumber)
+        ? { ...block, state: 'shifted' }
+        : block
+    );
+  }
+
+  if (primaryEvent.event_type === 'PSEUDO_EXON') {
+    const affected = uniqueNumbers(primaryEvent.affected_exon_numbers || []);
+    if (affected.length < 2) return baseBlocks;
+
+    const leftExon = Math.min(...affected);
+    const rightExon = Math.max(...affected);
+    const insertIndex = baseBlocks.findIndex((block) => block.exonNumber === rightExon);
+    if (insertIndex <= 0) return baseBlocks;
+
+    const pseudoBlock: MutantTranscriptBlock = {
+      key: `pseudo-${leftExon}-${rightExon}`,
+      kind: 'pseudo_exon',
+      label: 'PseudoExon',
+    };
+
+    return [
+      ...baseBlocks.slice(0, insertIndex),
+      pseudoBlock,
+      ...baseBlocks.slice(insertIndex),
+    ];
+  }
+
+  return baseBlocks;
 }
 
 export default function MatureMRNA() {
@@ -124,13 +216,13 @@ export default function MatureMRNA() {
         setNormalExons(allExons);
 
         // Step2에서 편집한 내용을 edits 배열로 변환
-        // SNV가 이미 적용된 서열(snvSequences)과 사용자 편집 서열(editedSequences) 비교
+        // current seed sequence(apply_alt면 representative SNV 적용, reference_is_current면 reference)와 사용자 편집 서열 비교
         const edits: Edit[] = [];
         
         if (data.snvSequences && data.editedSequences) {
           // 각 region별로 비교
           for (const regionId of Object.keys(data.editedSequences)) {
-            const snvSeq = data.snvSequences[regionId] || '';
+            const baseSeq = getBaseSequenceForRegion(data, regionId);
             const edited = data.editedSequences[regionId] || '';
             
             // region의 gene_start_idx 찾기
@@ -144,9 +236,9 @@ export default function MatureMRNA() {
             
             const regionStart = region.gene_start_idx;
             
-            // 각 위치별로 비교 (SNV 적용 서열과 편집 서열)
-            for (let i = 0; i < Math.max(snvSeq.length, edited.length); i++) {
-              const fromChar = snvSeq[i] || '';
+            // 각 위치별로 비교 (current seed sequence와 편집 서열)
+            for (let i = 0; i < Math.max(baseSeq.length, edited.length); i++) {
+              const fromChar = baseSeq[i] || '';
               const toChar = edited[i] || '';
               
               // SNV 적용 서열과 다르면 모두 edit으로 추가 (including N for deletions)
@@ -214,16 +306,8 @@ export default function MatureMRNA() {
         const splicingData: SplicingResponse = await splicingResponse.json();
         setSplicingResult(splicingData);
 
-        // Affected exons 추출
-        const affected: number[] = [];
-        if (splicingData.interpreted_events) {
-          splicingData.interpreted_events.forEach(event => {
-            if (event.affected_exon_numbers) {
-              affected.push(...event.affected_exon_numbers);
-            }
-          });
-        }
-        setAffectedExons([...new Set(affected)]); // 중복 제거
+        const primaryEvent = getPrimaryEvent(splicingData);
+        setAffectedExons(uniqueNumbers(primaryEvent?.affected_exon_numbers || []));
 
         // 이벤트 요약 설정
         if (splicingData.frontend_summary?.headline) {
@@ -288,6 +372,8 @@ export default function MatureMRNA() {
   }
 
   const geneSymbol = step2Data.diseaseDetail.gene.gene_symbol;
+  const primaryEvent = getPrimaryEvent(splicingResult);
+  const mutantTranscriptBlocks = buildMutantTranscriptBlocks(normalExons, primaryEvent);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-transparent px-4 py-8 sm:px-6 lg:px-8">
@@ -323,26 +409,45 @@ export default function MatureMRNA() {
             <p className="mb-4 text-xl font-bold italic text-rose-800">{geneSymbol} (비정상)</p>
             <div className="relative">
               <div className="flex items-center gap-1 flex-wrap">
-                {normalExons.map((exonNum) => {
-                  const isAffected = affectedExons.includes(exonNum);
-                  
-                  if (isAffected) {
-                    // Affected exon - 빨간 점선 테두리
+                {mutantTranscriptBlocks.map((block) => {
+                  if (block.kind === 'pseudo_exon') {
                     return (
-                      <div key={`mutant-${exonNum}`} className="relative">
+                      <div
+                        key={block.key}
+                        className="min-w-16 rounded-xl border border-amber-300/35 bg-amber-100/10 px-4 py-2 text-center shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm"
+                      >
+                        <span className="text-sm font-semibold text-amber-900">{block.label}</span>
+                      </div>
+                    );
+                  }
+
+                  if (block.state === 'excluded') {
+                    return (
+                      <div key={block.key} className="relative">
                         <div className="min-w-16 rounded-xl border border-dashed border-rose-300/35 bg-rose-100/10 px-4 py-2 text-center opacity-70 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm">
-                          <span className="text-sm font-semibold text-rose-800 line-through">Exon{exonNum}</span>
+                          <span className="text-sm font-semibold text-rose-800 line-through">{block.label}</span>
                         </div>
                       </div>
                     );
                   }
-                  
+
+                  if (block.state === 'shifted') {
+                    return (
+                      <div
+                        key={block.key}
+                        className="min-w-16 rounded-xl border border-cyan-300/35 bg-cyan-100/10 px-4 py-2 text-center shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm"
+                      >
+                        <span className="text-sm font-semibold text-cyan-900">{block.label}</span>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div 
-                      key={`mutant-${exonNum}`}
+                    <div
+                      key={block.key}
                       className="min-w-16 rounded-xl border border-white/16 bg-white/5 px-4 py-2 text-center shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur-sm"
                     >
-                      <span className="text-sm font-semibold text-slate-950">Exon{exonNum}</span>
+                      <span className="text-sm font-semibold text-slate-950">{block.label}</span>
                     </div>
                   );
                 })}

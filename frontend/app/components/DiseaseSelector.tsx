@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../lib/api';
 
 // 질병 목록 타입 (새 API 구조)
 interface Disease {
@@ -93,9 +94,6 @@ interface DiseaseDetail {
     default_view: string;
   };
 }
-
-// FastAPI URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 export default function DiseaseSelector() {
   const router = useRouter();

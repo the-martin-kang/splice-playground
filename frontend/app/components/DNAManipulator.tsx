@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { API_BASE_URL } from '../lib/api';
 
 interface Region {
   region_id: string;
@@ -19,6 +20,7 @@ interface DiseaseDetail {
     disease_id: string;
     disease_name: string;
     gene_id: string;
+    seed_mode?: string | null;
   };
   gene: {
     gene_id: string;
@@ -44,7 +46,6 @@ interface RegionData {
   region: Region;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 const BASE_MAP: Record<string, string> = {
   A: 'A',
   C: 'C',
@@ -203,6 +204,17 @@ export default function DNAManipulator() {
     void fetchDiseaseDetail();
   }, [diseaseId]);
 
+  const autoApplyDiseaseSnv = (diseaseDetail?.disease.seed_mode || 'apply_alt') !== 'reference_is_current';
+
+  const initialRegionSequence = (originalSeq: string, snvSeq: string) =>
+    autoApplyDiseaseSnv ? snvSeq : originalSeq;
+
+  const baseSequenceForRegion = (regionId: string) => {
+    const originalSeq = originalSequences[regionId] || '';
+    const snvSeq = snvSequences[regionId] || originalSeq;
+    return autoApplyDiseaseSnv ? snvSeq : originalSeq;
+  };
+
   const applySnvToSequence = (sequence: string, region: Region): string => {
     if (!diseaseDetail?.splice_altering_snv) return sequence;
 
@@ -237,11 +249,12 @@ export default function DNAManipulator() {
       setSelectedRegion(region);
       const originalSeq = region.sequence;
       const snvSeq = applySnvToSequence(originalSeq, region);
+      const initialSeq = initialRegionSequence(originalSeq, snvSeq);
 
       setOriginalSequences(prev => ({ ...prev, [region.region_id]: originalSeq }));
       setSnvSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
-      setEditedSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
-      setCurrentSequence(snvSeq);
+      setEditedSequences(prev => ({ ...prev, [region.region_id]: initialSeq }));
+      setCurrentSequence(initialSeq);
       return;
     }
 
@@ -260,11 +273,12 @@ export default function DNAManipulator() {
       const data: RegionData = await response.json();
       const originalSeq = data.region.sequence || '';
       const snvSeq = applySnvToSequence(originalSeq, region);
+      const initialSeq = initialRegionSequence(originalSeq, snvSeq);
 
       setOriginalSequences(prev => ({ ...prev, [region.region_id]: originalSeq }));
       setSnvSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
-      setEditedSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
-      setCurrentSequence(snvSeq);
+      setEditedSequences(prev => ({ ...prev, [region.region_id]: initialSeq }));
+      setCurrentSequence(initialSeq);
     } catch (err) {
       console.error('Error fetching region:', err);
       setCurrentSequence('시퀀스를 불러올 수 없습니다');
@@ -435,9 +449,8 @@ export default function DNAManipulator() {
   };
 
   const hasEdits = (regionId: string): boolean => {
-    if (!snvSequences[regionId]) return false;
     if (!editedSequences[regionId]) return false;
-    return editedSequences[regionId] !== snvSequences[regionId];
+    return editedSequences[regionId] !== baseSequenceForRegion(regionId);
   };
 
   const hasSNV = (regionId: string): boolean => {
@@ -449,17 +462,17 @@ export default function DNAManipulator() {
   };
 
   const currentOriginalSequence = selectedRegion ? originalSequences[selectedRegion.region_id] || '' : '';
-  const currentSeedSequence = selectedRegion ? snvSequences[selectedRegion.region_id] || '' : '';
+  const currentBaseSequence = selectedRegion ? baseSequenceForRegion(selectedRegion.region_id) : '';
   const differenceSummary = useMemo(() => {
     if (!selectedRegion || !currentOriginalSequence || !currentSequence) return { toReference: 0, toSeed: 0 };
     let toReference = 0;
     let toSeed = 0;
     for (let i = 0; i < currentSequence.length; i += 1) {
       if (currentSequence[i] !== currentOriginalSequence[i]) toReference += 1;
-      if (currentSequence[i] !== currentSeedSequence[i]) toSeed += 1;
+      if (currentSequence[i] !== currentBaseSequence[i]) toSeed += 1;
     }
     return { toReference, toSeed };
-  }, [selectedRegion, currentOriginalSequence, currentSeedSequence, currentSequence]);
+  }, [selectedRegion, currentOriginalSequence, currentBaseSequence, currentSequence]);
 
   if (isLoading) {
     return (
@@ -584,7 +597,7 @@ export default function DNAManipulator() {
                 <div className="flex flex-wrap gap-2 text-xs text-slate-700">
                   <span className="rounded-full border border-white/16 bg-white/5 px-3 py-1">길이: {currentSequence.length} bp</span>
                   <span className="rounded-full border border-white/16 bg-white/5 px-3 py-1">Reference diff: {differenceSummary.toReference}</span>
-                  <span className="rounded-full border border-white/16 bg-white/5 px-3 py-1">Seed diff: {differenceSummary.toSeed}</span>
+                  <span className="rounded-full border border-white/16 bg-white/5 px-3 py-1">Current diff: {differenceSummary.toSeed}</span>
                 </div>
               </div>
 

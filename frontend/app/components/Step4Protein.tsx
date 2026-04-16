@@ -1,11 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MolstarViewer, { MolstarComputedComparison, MolstarStructureInput } from './MolstarViewer';
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.splice-playground-api.com';
+import { API_BASE_URL } from '../lib/api';
 
 type StructureStrategy = 'reuse_baseline' | 'predict_user_structure';
 
@@ -196,7 +194,7 @@ function statusClassName(status: string) {
   if (['completed', 'succeeded', 'success'].includes(normalized)) {
     return 'border-emerald-300/40 bg-emerald-100/15 text-emerald-50';
   }
-  if (['failed', 'error', 'cancelled'].includes(normalized)) {
+  if (['failed', 'error', 'cancelled', 'canceled'].includes(normalized)) {
     return 'border-rose-300/35 bg-rose-100/10 text-rose-900';
   }
   return 'border-amber-300/35 bg-amber-100/10 text-amber-900';
@@ -207,8 +205,18 @@ function isTerminalJob(job: Step4StructureJob) {
   return (
     !!job.error_message ||
     !!job.molstar_default?.url ||
-    ['completed', 'succeeded', 'success', 'failed', 'error', 'cancelled'].includes(normalized)
+    ['completed', 'succeeded', 'success', 'failed', 'error', 'cancelled', 'canceled'].includes(normalized)
   );
+}
+
+function normalizeStructureUrl(url?: string | null) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return url.split('?')[0] || url;
+  }
 }
 
 function extractApiMessage(payload: unknown) {
@@ -240,6 +248,9 @@ function mergeMolstarTarget(previous: MolstarTarget | null, next: MolstarTarget 
     next.structure_asset_id &&
     previous.structure_asset_id === next.structure_asset_id
   ) {
+    return previous;
+  }
+  if (previous?.url && normalizeStructureUrl(previous.url) === normalizeStructureUrl(next.url)) {
     return previous;
   }
   return next;
@@ -291,7 +302,7 @@ function buildJobProgress(
     };
   }
 
-  if (['failed', 'error', 'cancelled'].includes(status)) {
+  if (['failed', 'error', 'cancelled', 'canceled'].includes(status)) {
     return {
       tone: 'rose' as const,
       title: 'ColabFold 예측이 실패했습니다.',
@@ -355,6 +366,13 @@ export default function Step4Protein() {
   const [step3EventHeadline, setStep3EventHeadline] = useState<string | null>(null);
   const [step3AffectedSummary, setStep3AffectedSummary] = useState<string | null>(null);
   const hasInitializedViewRef = useRef(false);
+  const hasAutoShiftedToUserViewRef = useRef(false);
+  const previousUserTargetIdentityRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    hasAutoShiftedToUserViewRef.current = false;
+    previousUserTargetIdentityRef.current = null;
+  }, [stateId]);
 
   useEffect(() => {
     try {
@@ -478,7 +496,9 @@ export default function Step4Protein() {
   useEffect(() => {
     if (!job?.job_id || isTerminalJob(job)) return;
 
-    const timer = window.setInterval(async () => {
+    let disposed = false;
+
+    const pollJob = async () => {
       try {
         const response = await fetch(
           `${API_BASE_URL}/api/step4-jobs/${encodeURIComponent(job.job_id)}?include_payload=false`
@@ -488,17 +508,54 @@ export default function Step4Protein() {
           throw new Error(extractApiMessage(payload) || `HTTP error! status: ${response.status}`);
         }
         const refreshedJob = payload as Step4StructureJob;
+        if (disposed) return;
         setJob((prev) => ({ ...(prev || {}), ...refreshedJob } as Step4StructureJob));
         if (refreshedJob.molstar_default?.url) {
           setStableUserTarget((prev) => mergeMolstarTarget(prev, refreshedJob.molstar_default || null));
         }
+        if (isTerminalJob(refreshedJob)) {
+          window.clearInterval(timer);
+          void fetchStep4(false);
+        }
       } catch (pollError) {
+        if (disposed) return;
         setJobError(formatError(pollError));
       }
+    };
+
+    const timer = window.setInterval(() => {
+      void pollJob();
     }, 8000);
 
-    return () => window.clearInterval(timer);
+    void pollJob();
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
   }, [job?.job_id, job?.status, job?.error_message, job?.molstar_default?.url]);
+
+  useEffect(() => {
+    const userTargetUrl =
+      stableUserTarget?.url ||
+      (step4Data?.user_track.comparison_to_normal.same_as_normal ? stableNormalTarget?.url || null : null);
+    const nextIdentity = normalizeStructureUrl(userTargetUrl);
+
+    if (!step4Data || !stableNormalTarget?.url || !nextIdentity) {
+      previousUserTargetIdentityRef.current = nextIdentity;
+      return;
+    }
+
+    const previousIdentity = previousUserTargetIdentityRef.current;
+    previousUserTargetIdentityRef.current = nextIdentity;
+
+    if (hasAutoShiftedToUserViewRef.current || previousIdentity === nextIdentity) {
+      return;
+    }
+
+    setActiveStructureView(step4Data.user_track.comparison_to_normal.same_as_normal ? 'user' : 'overlay');
+    hasAutoShiftedToUserViewRef.current = true;
+  }, [stableNormalTarget?.url, stableUserTarget?.url, step4Data?.user_track.comparison_to_normal.same_as_normal]);
 
   if (isLoading) {
     return (
@@ -580,7 +637,8 @@ export default function Step4Protein() {
 
   const transcriptBlocks = step4Data.user_track.predicted_transcript.blocks;
   const excludedExons = step4Data.user_track.predicted_transcript.excluded_exon_numbers || [];
-  const highlightedExons = Array.from(new Set([...step3AffectedExons, ...excludedExons]));
+  const excludedExonSet = new Set(excludedExons);
+  const involvedExons = Array.from(new Set(step3AffectedExons.filter((exonNo) => !excludedExonSet.has(exonNo))));
   const transcriptHeadline = step3EventHeadline || step3AffectedSummary || null;
 
   const progress = buildJobProgress(job, step4Data, Boolean(userViewerTarget?.url));
@@ -763,14 +821,22 @@ export default function Step4Protein() {
                   {transcriptHeadline}
                 </p>
               ) : null}
-              {highlightedExons.length > 0 ? (
+              {excludedExons.length > 0 || involvedExons.length > 0 ? (
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-800">
-                  {highlightedExons.map((exonNo) => (
+                  {excludedExons.map((exonNo) => (
                     <span
-                      key={`affected-exon-${exonNo}`}
+                      key={`excluded-exon-${exonNo}`}
                       className="rounded-full border border-rose-300/35 bg-rose-100/10 px-3 py-1 font-semibold text-rose-900"
                     >
-                      Exon {exonNo} affected
+                      Exon {exonNo} excluded
+                    </span>
+                  ))}
+                  {involvedExons.map((exonNo) => (
+                    <span
+                      key={`involved-exon-${exonNo}`}
+                      className="rounded-full border border-amber-300/35 bg-amber-100/10 px-3 py-1 font-semibold text-amber-900"
+                    >
+                      Exon {exonNo} involved
                     </span>
                   ))}
                 </div>
@@ -778,11 +844,13 @@ export default function Step4Protein() {
               <div className="mt-4 flex max-h-[280px] flex-wrap gap-2 overflow-y-auto pr-1">
                 {transcriptBlocks.map((block) => {
                   const exonNumber = block.canonical_exon_number ?? null;
-                  const isAffectedCanonical = exonNumber != null && highlightedExons.includes(exonNumber);
+                  const isExcludedCanonical = exonNumber != null && excludedExonSet.has(exonNumber);
                   const blockClass =
                     block.block_kind === 'pseudo_exon'
                       ? 'border-amber-300/35 bg-amber-100/10 text-amber-900'
-                      : isAffectedCanonical
+                      : block.block_kind === 'boundary_shift'
+                        ? 'border-cyan-300/35 bg-cyan-100/10 text-cyan-900'
+                      : isExcludedCanonical
                         ? 'border-rose-300/35 bg-rose-100/10 text-rose-900'
                         : 'border-white/14 bg-white/5 text-slate-800';
                   return (

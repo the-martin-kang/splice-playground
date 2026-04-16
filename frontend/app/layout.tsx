@@ -6,8 +6,6 @@ export const metadata: Metadata = {
   description: "DNA editing, transcript interpretation, and protein structure visualization.",
 };
 
-const SPLINE_BACKGROUND_URL = "https://my.spline.design/dnaparticles-6UgRE9GWGZpK60pQwO9UVgWB/";
-
 export default function RootLayout({
   children,
 }: {
@@ -17,15 +15,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="relative min-h-screen overflow-x-hidden bg-slate-950">
         <div aria-hidden="true" className="fixed inset-0 z-0 overflow-hidden">
-          <iframe
-            title="Spline DNA background"
-            src={SPLINE_BACKGROUND_URL}
-            className="absolute inset-0 h-full w-full border-0"
-            frameBorder="0"
-            width="100%"
-            height="100%"
-            loading="eager"
-            allow="autoplay; fullscreen"
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: "url('/images/background.png')" }}
           />
         </div>
         <div className="relative z-10">{children}</div>
