@@ -286,7 +286,7 @@ export default function MolstarViewer({
 
         const plugin = await modules.createPluginUI({
           target: mountTarget,
-          render: (element: any, target: HTMLElement) => {
+          render: (element: any, target: Element) => {
             createRoot(target).render(element);
           },
           spec: {
