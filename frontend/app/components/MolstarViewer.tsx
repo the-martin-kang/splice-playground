@@ -37,6 +37,7 @@ const MOLSTAR_STYLE_ID = 'molstar-viewer-style';
 const MOLSTAR_STYLE_HREF = '/vendor/molstar/molstar.css';
 const DEFAULT_PRIMARY_COLOR = 0x22c55e;
 const DEFAULT_SECONDARY_COLOR = 0xef4444;
+const VIEWER_HEIGHT_CLASS = 'h-[560px]';
 
 function isBinaryFormat(format?: MolstarFormat | null) {
   return (format || 'mmcif') === 'bcif';
@@ -240,7 +241,7 @@ export default function MolstarViewer({
   mode = 'single',
   onComputedComparison,
 }: MolstarViewerProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const overlayHostRef = useRef<HTMLDivElement | null>(null);
   const pluginRef = useRef<any>(null);
   const signatureRef = useRef<string>('');
   const comparisonCallbackRef = useRef<typeof onComputedComparison>(onComputedComparison);
@@ -257,10 +258,11 @@ export default function MolstarViewer({
       signatureRef.current = buildSignature(mode, primary, secondary);
       setViewerError(null);
       comparisonCallbackRef.current?.(null);
+      if (overlayHostRef.current) overlayHostRef.current.replaceChildren();
       return;
     }
 
-    if (!containerRef.current || !primary?.url || !secondary?.url) return;
+    if (!overlayHostRef.current || !primary?.url || !secondary?.url) return;
 
     let disposed = false;
 
@@ -269,7 +271,7 @@ export default function MolstarViewer({
         setViewerError(null);
         await ensureMolstarStyle();
         const modules = await importMolstarModules();
-        if (disposed || !containerRef.current) return;
+        if (disposed || !overlayHostRef.current) return;
 
         const nextSignature = buildSignature(mode, primary, secondary);
         if (pluginRef.current && signatureRef.current === nextSignature) {
@@ -277,11 +279,15 @@ export default function MolstarViewer({
         }
 
         pluginRef.current?.dispose?.();
-        containerRef.current.innerHTML = '';
+        pluginRef.current = null;
+
+        const mountTarget = document.createElement('div');
+        mountTarget.className = 'h-full w-full';
+        overlayHostRef.current.replaceChildren(mountTarget);
         signatureRef.current = nextSignature;
 
         const plugin = await modules.createPluginUI({
-          target: containerRef.current,
+          target: mountTarget,
           render: modules.renderReact18,
           spec: {
             ...modules.DefaultPluginUISpec(),
@@ -308,6 +314,12 @@ export default function MolstarViewer({
             },
           },
         });
+
+        if (disposed) {
+          plugin.dispose?.();
+          return;
+        }
+
         pluginRef.current = plugin;
 
         await plugin.clear();
@@ -389,12 +401,13 @@ export default function MolstarViewer({
     return () => {
       pluginRef.current?.dispose?.();
       pluginRef.current = null;
+      if (overlayHostRef.current) overlayHostRef.current.replaceChildren();
     };
   }, []);
 
   if (!primary?.url) {
     return (
-      <div className="flex h-[560px] items-center justify-center rounded-[20px] border border-dashed border-white/14 bg-white/4 px-6 text-center text-slate-800 backdrop-blur-sm">
+      <div className={`flex ${VIEWER_HEIGHT_CLASS} items-center justify-center rounded-[20px] border border-dashed border-white/14 bg-white/4 px-6 text-center text-slate-800 backdrop-blur-sm`}>
         표시할 구조 파일 URL이 아직 없습니다.
       </div>
     );
@@ -403,12 +416,12 @@ export default function MolstarViewer({
   if (mode === 'single') {
     const iframeSrc = buildIframeViewerUrl(primary);
     return (
-      <div className="overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)]">
+      <div className={`overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)] ${VIEWER_HEIGHT_CLASS}`}>
         <iframe
           key={iframeSrc}
           title={primary.label || 'Protein Structure'}
           src={iframeSrc}
-          className="h-[560px] w-full border-0"
+          className="h-full w-full border-0"
           loading="eager"
           allow="fullscreen"
         />
@@ -417,25 +430,25 @@ export default function MolstarViewer({
   }
 
   return (
-    <div className="overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)]">
-      <div ref={containerRef} className="h-[560px] w-full" />
-      {viewerError && (
-        <div className="border-t border-white/10 bg-rose-500/10 px-4 py-3 text-sm text-rose-900">
-          {viewerError}
-        </div>
-      )}
+    <div className={`relative overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)] ${VIEWER_HEIGHT_CLASS}`}>
+      <div ref={overlayHostRef} className="h-full w-full" />
       {secondary?.url ? (
-        <div className="flex flex-wrap gap-3 border-t border-white/10 px-4 py-3 text-xs text-slate-200">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+        <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-wrap gap-2 text-xs text-slate-200">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1 backdrop-blur-sm">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
             정상 구조
           </span>
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1 backdrop-blur-sm">
             <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#ef4444]" />
             생성 구조
           </span>
         </div>
       ) : null}
+      {viewerError && (
+        <div className="absolute inset-x-0 bottom-0 z-10 border-t border-white/10 bg-rose-500/10 px-4 py-3 text-sm text-rose-900 backdrop-blur-sm">
+          {viewerError}
+        </div>
+      )}
     </div>
   );
 }
