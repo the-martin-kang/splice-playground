@@ -154,6 +154,21 @@ interface CreateJobResponse {
   user_track?: Step4StateResponse['user_track'] | null;
 }
 
+interface Step3SummaryEvent {
+  event_type?: string;
+  summary?: string;
+  affected_exon_numbers?: number[];
+}
+
+interface Step3Snapshot {
+  eventSummary?: string;
+  affectedExons?: number[];
+  splicingResult?: {
+    frontend_summary?: { headline?: string };
+    interpreted_events?: Step3SummaryEvent[];
+  };
+}
+
 function formatError(error: unknown) {
   if (error instanceof Error) return error.message;
   return '요청 중 오류가 발생했습니다.';
@@ -336,16 +351,30 @@ export default function Step4Protein() {
   const [frontendStructureComparison, setFrontendStructureComparison] = useState<Step4StructureComparison | null>(null);
   const [stableNormalTarget, setStableNormalTarget] = useState<MolstarTarget | null>(null);
   const [stableUserTarget, setStableUserTarget] = useState<MolstarTarget | null>(null);
+  const [step3AffectedExons, setStep3AffectedExons] = useState<number[]>([]);
+  const [step3EventHeadline, setStep3EventHeadline] = useState<string | null>(null);
+  const [step3AffectedSummary, setStep3AffectedSummary] = useState<string | null>(null);
   const hasInitializedViewRef = useRef(false);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('step3Data');
       if (!saved) return;
-      const parsed = JSON.parse(saved) as { diseaseDetail?: { disease?: { disease_name?: string } } };
+      const parsed = JSON.parse(saved) as Step3Snapshot & { diseaseDetail?: { disease?: { disease_name?: string } } };
       setDiseaseName(parsed.diseaseDetail?.disease?.disease_name || null);
+      setStep3AffectedExons(parsed.affectedExons || []);
+      setStep3EventHeadline(
+        parsed.splicingResult?.frontend_summary?.headline || parsed.eventSummary || null
+      );
+      const summaries = (parsed.splicingResult?.interpreted_events || [])
+        .map(event => event.summary)
+        .filter((value): value is string => Boolean(value));
+      setStep3AffectedSummary(summaries.length ? summaries.join(' ') : null);
     } catch {
       setDiseaseName(null);
+      setStep3AffectedExons([]);
+      setStep3EventHeadline(null);
+      setStep3AffectedSummary(null);
     }
   }, []);
 
@@ -424,9 +453,6 @@ export default function Step4Protein() {
       }
 
       if (payload?.message) setJobMessage(payload.message);
-      if (payload?.user_track && step4Data) {
-        setStep4Data({ ...step4Data, user_track: payload.user_track });
-      }
       if (payload?.job) {
         setJob(payload.job);
         setStableUserTarget((prev) => mergeMolstarTarget(prev, payload.job?.molstar_default || null));
@@ -552,6 +578,11 @@ export default function Step4Protein() {
   const singleDisplayedTarget =
     activeStructureView === 'user' && userViewerTarget ? userViewerTarget : normalViewerTarget;
 
+  const transcriptBlocks = step4Data.user_track.predicted_transcript.blocks;
+  const excludedExons = step4Data.user_track.predicted_transcript.excluded_exon_numbers || [];
+  const highlightedExons = Array.from(new Set([...step3AffectedExons, ...excludedExons]));
+  const transcriptHeadline = step3EventHeadline || step3AffectedSummary || null;
+
   const progress = buildJobProgress(job, step4Data, Boolean(userViewerTarget?.url));
 
   return (
@@ -599,7 +630,7 @@ export default function Step4Protein() {
                 <h2 className="text-2xl font-black text-slate-950">Mol* Structure Viewer</h2>
                 <p className="mt-1 text-sm text-slate-800">정상 구조는 초록, 생성 구조는 빨강으로 표시하며, overlay 모드에서는 브라우저에서 TM-align으로 직접 겹쳐 비교합니다.</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="relative z-10 flex flex-wrap gap-2">
                 <button
                   onClick={() => setActiveStructureView('normal')}
                   className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${activeStructureView === 'normal' ? 'border-cyan-300/60 bg-cyan-100/12 text-cyan-900' : 'border-black/10 bg-white/10 text-slate-800 hover:bg-white/12'}`}
@@ -727,15 +758,42 @@ export default function Step4Protein() {
 
             <section className="rounded-[24px] border border-white/18 bg-white/5 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-lg">
               <h2 className="text-xl font-black text-slate-950">Transcript Blocks</h2>
+              {transcriptHeadline ? (
+                <p className="mt-3 rounded-2xl border border-cyan-300/25 bg-cyan-100/10 px-4 py-3 text-sm leading-6 text-slate-900">
+                  {transcriptHeadline}
+                </p>
+              ) : null}
+              {highlightedExons.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-800">
+                  {highlightedExons.map((exonNo) => (
+                    <span
+                      key={`affected-exon-${exonNo}`}
+                      className="rounded-full border border-rose-300/35 bg-rose-100/10 px-3 py-1 font-semibold text-rose-900"
+                    >
+                      Exon {exonNo} affected
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <div className="mt-4 flex max-h-[280px] flex-wrap gap-2 overflow-y-auto pr-1">
-                {step4Data.user_track.predicted_transcript.blocks.map((block) => (
-                  <div
-                    key={block.block_id}
-                    className={`rounded-full border px-3 py-2 text-xs font-semibold ${block.block_kind === 'pseudo_exon' ? 'border-amber-300/35 bg-amber-100/10 text-amber-900' : 'border-white/14 bg-white/5 text-slate-800'}`}
-                  >
-                    {block.label} · {block.length} nt
-                  </div>
-                ))}
+                {transcriptBlocks.map((block) => {
+                  const exonNumber = block.canonical_exon_number ?? null;
+                  const isAffectedCanonical = exonNumber != null && highlightedExons.includes(exonNumber);
+                  const blockClass =
+                    block.block_kind === 'pseudo_exon'
+                      ? 'border-amber-300/35 bg-amber-100/10 text-amber-900'
+                      : isAffectedCanonical
+                        ? 'border-rose-300/35 bg-rose-100/10 text-rose-900'
+                        : 'border-white/14 bg-white/5 text-slate-800';
+                  return (
+                    <div
+                      key={block.block_id}
+                      className={`rounded-full border px-3 py-2 text-xs font-semibold ${blockClass}`}
+                    >
+                      {block.label} · {block.length} nt
+                    </div>
+                  );
+                })}
               </div>
             </section>
 

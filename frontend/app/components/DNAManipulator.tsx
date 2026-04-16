@@ -115,10 +115,10 @@ function renderDiffSpans(
   }
 ) {
   const changedClassName =
-    options?.changedClassName || 'rounded bg-amber-300/70 px-[1px] font-bold text-slate-950';
+    options?.changedClassName || 'bg-amber-300/55 text-slate-950';
   const sameClassName = options?.sameClassName || '';
   const snvClassName =
-    options?.snvClassName || 'rounded bg-rose-300/70 px-[1px] font-bold text-rose-950';
+    options?.snvClassName || 'bg-rose-300/55 text-rose-950';
 
   return source.split('').map((char, idx) => {
     const isChanged = char !== compareTo[idx];
@@ -298,16 +298,24 @@ export default function DNAManipulator() {
     const lowerKey = event.key.toLowerCase();
     const blockedKeys = new Set([
       'Shift', 'CapsLock', 'Alt', 'AltGraph', 'Control', 'Meta',
-      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-      'Home', 'End', 'PageUp', 'PageDown', 'Insert', 'Escape',
-      'Enter', 'Tab',
+      'PageUp', 'PageDown', 'Insert', 'Escape', 'Enter', 'Tab',
     ]);
+    const navigationKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
 
-    if ((event.ctrlKey || event.metaKey) && ['a', 'c', 'v'].includes(lowerKey)) {
+    if ((event.ctrlKey || event.metaKey) && ['a', 'c', 'v', 'x'].includes(lowerKey)) {
       return;
     }
 
-    if (event.ctrlKey || event.metaKey || event.altKey || blockedKeys.has(event.key)) {
+    if (navigationKeys.has(event.key)) {
+      return;
+    }
+
+    if (blockedKeys.has(event.key)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey || event.altKey) {
       event.preventDefault();
       return;
     }
@@ -604,10 +612,10 @@ export default function DNAManipulator() {
                   <div className="grid gap-4 xl:grid-cols-2">
                     <div>
                       <p className="mb-1 text-sm font-semibold text-slate-800">정상 서열 (Reference)</p>
-                      <div className="max-h-40 overflow-auto rounded-xl border border-white/16 bg-white/5 p-4 font-mono text-sm leading-6 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] break-all whitespace-pre-wrap">
+                      <div className="max-h-40 overflow-auto rounded-xl border border-white/16 bg-white/5 p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] break-all whitespace-pre-wrap">
                         {currentOriginalSequence
                           ? renderDiffSpans(currentOriginalSequence, currentSequence, {
-                              changedClassName: 'rounded bg-amber-300/75 px-[1px] font-bold text-slate-950',
+                              changedClassName: 'bg-amber-300/55 text-slate-950',
                             })
                           : '로딩 중...'}
                       </div>
@@ -619,10 +627,10 @@ export default function DNAManipulator() {
                         <div
                           ref={editorBackdropRef}
                           aria-hidden="true"
-                          className="pointer-events-none max-h-56 overflow-auto p-4 font-mono text-sm leading-6 text-slate-950 break-all whitespace-pre-wrap"
+                          className="pointer-events-none max-h-56 overflow-auto p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] break-all whitespace-pre-wrap"
                         >
                           {renderDiffSpans(currentSequence, currentOriginalSequence, {
-                            changedClassName: 'rounded bg-amber-300/75 px-[1px] font-bold text-slate-950',
+                            changedClassName: 'bg-amber-300/55 text-slate-950',
                           })}
                         </div>
                         <textarea
@@ -637,7 +645,7 @@ export default function DNAManipulator() {
                           onPaste={handlePaste}
                           onChange={handleTextareaFallbackChange}
                           onScroll={handleEditorScroll}
-                          className="absolute inset-0 min-h-full w-full resize-none bg-transparent p-4 font-mono text-sm leading-6 text-transparent caret-slate-950 outline-none selection:bg-cyan-200/40"
+                          className="absolute inset-0 min-h-full w-full resize-none bg-transparent p-4 font-mono text-sm leading-6 tracking-normal text-transparent [font-variant-ligatures:none] caret-slate-950 outline-none selection:bg-cyan-200/40"
                         />
                       </div>
                       <p className="mt-2 text-xs text-slate-700">
