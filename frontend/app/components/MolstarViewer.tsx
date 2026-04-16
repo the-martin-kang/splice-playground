@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 
 type MolstarFormat = 'mmcif' | 'bcif' | 'pdb' | string;
 
@@ -74,7 +75,6 @@ async function ensureMolstarStyle() {
 async function importMolstarModules() {
   const [
     pluginUi,
-    react18,
     spec,
     assets,
     color,
@@ -85,7 +85,6 @@ async function importMolstarModules() {
     tmAlignModule,
   ] = await Promise.all([
     import('molstar/lib/mol-plugin-ui/index.js'),
-    import('molstar/lib/mol-plugin-ui/react18.js'),
     import('molstar/lib/mol-plugin-ui/spec.js'),
     import('molstar/lib/mol-util/assets.js'),
     import('molstar/lib/mol-util/color/index.js'),
@@ -98,7 +97,6 @@ async function importMolstarModules() {
 
   return {
     createPluginUI: pluginUi.createPluginUI,
-    renderReact18: react18.renderReact18,
     DefaultPluginUISpec: spec.DefaultPluginUISpec,
     Asset: assets.Asset,
     Color: color.Color,
@@ -288,7 +286,9 @@ export default function MolstarViewer({
 
         const plugin = await modules.createPluginUI({
           target: mountTarget,
-          render: modules.renderReact18,
+          render: (element: any, target: HTMLElement) => {
+            createRoot(target).render(element);
+          },
           spec: {
             ...modules.DefaultPluginUISpec(),
             layout: {
