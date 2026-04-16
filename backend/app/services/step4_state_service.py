@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from app.core.config import get_settings
 from app.db.repositories import disease_repo, gene_repo, region_repo, state_repo
 from app.db.repositories.step4_baseline_repo import list_structure_assets
-from app.db.repositories.structure_job_repo import get_job, list_jobs_for_state
+from app.db.repositories.structure_job_repo import find_jobs_by_user_protein_sha, get_job, list_jobs_for_state
 from app.schemas.splicing import PredictSplicingRequest, Step3SplicingEvent
 from app.schemas.step4 import (
     Step4CapabilitiesPublic,
@@ -94,6 +94,35 @@ def _get_state_disease_gene(state_id: str) -> Tuple[Dict[str, Any], Dict[str, An
         raise HTTPException(status_code=404, detail=f"gene not found: {gene_id}")
     return srow, drow, grow
 
+
+
+def _find_reusable_global_job_for_user_protein(user_protein_sha256: str) -> Optional[Dict[str, Any]]:
+    rows = find_jobs_by_user_protein_sha(
+        user_protein_sha256,
+        provider='colabfold',
+        statuses=['succeeded', 'running', 'queued'],
+        include_payload=True,
+        limit=25,
+    )
+    if not rows:
+        return None
+
+    def _priority(row: Dict[str, Any]) -> tuple[int, int]:
+        status = str(row.get('status') or '')
+        payload = row.get('result_payload') or {}
+        assets = payload.get('assets') or []
+        has_structure = any(isinstance(a, dict) and str(a.get('kind') or '') == 'structure' for a in assets)
+        if status == 'succeeded' and has_structure:
+            return (0, 0)
+        if status == 'running':
+            return (1, 0)
+        if status == 'queued':
+            return (2, 0)
+        return (9, 1)
+
+    rows = sorted(rows, key=_priority)
+    best = rows[0]
+    return None if _priority(best)[0] >= 9 else best
 
 
 def _build_current_gene_sequence(
@@ -666,20 +695,40 @@ def get_step4_for_state(
     comparison = _sequence_comparison(baseline.baseline_protein.protein_seq or "", user_protein_seq)
 
     jobs, latest_job = _hydrate_jobs_for_state(state_id, include_latest_payload=include_latest_job_payload) if hydrate_jobs else ([], None)
-    settings = get_settings()
-    structure_prediction_enabled = bool(settings.STEP4_ENABLE_STRUCTURE_JOBS)
-    structure_prediction_message = (
-        None
-        if structure_prediction_enabled
-        else (
-            "STEP4 user-structure prediction is disabled right now. "
-            "Use the normal baseline structure now, then set STEP4_ENABLE_STRUCTURE_JOBS=true on the public API server and start the ColabFold worker on the GPU host for STEP4 jobs."
-        )
-    )
     normalized_structures = [s.model_copy(update={"viewer_format": _viewer_format(s.file_format)}) for s in baseline.structures]
     default_structure = _default_structure_asset(normalized_structures)
     can_reuse_normal_structure = bool(comparison.same_as_normal and normalized_structures)
     recommended_strategy = "reuse_baseline" if can_reuse_normal_structure else "predict_user_structure"
+
+    user_protein_sha = sha256_text(user_protein_seq) if user_protein_seq else None
+    global_reusable_job = None if can_reuse_normal_structure or not user_protein_sha else _find_reusable_global_job_for_user_protein(user_protein_sha)
+    if global_reusable_job is not None:
+        global_public = _job_public(global_reusable_job)
+        current_status = str(latest_job.status) if latest_job is not None else ''
+        if latest_job is None or current_status in {'failed', 'canceled'}:
+            latest_job = global_public
+            if hydrate_jobs:
+                if not jobs or str(jobs[0].job_id) != str(global_public.job_id):
+                    jobs = [global_public] + [j for j in jobs if str(j.job_id) != str(global_public.job_id)]
+
+    settings = get_settings()
+    structure_prediction_enabled = bool(settings.STEP4_ENABLE_STRUCTURE_JOBS or can_reuse_normal_structure or global_reusable_job is not None)
+    structure_prediction_message = (
+        None
+        if settings.STEP4_ENABLE_STRUCTURE_JOBS
+        else (
+            "User protein matches the normal baseline protein; baseline structures can be reused without the GPU worker."
+            if can_reuse_normal_structure
+            else (
+                "An identical user protein was predicted previously; the cached structure result can be reused even while the GPU worker is offline."
+                if global_reusable_job is not None
+                else (
+                    "STEP4 user-structure prediction is disabled right now. "
+                    "Use the normal baseline structure now, then set STEP4_ENABLE_STRUCTURE_JOBS=true on the public API server and start the ColabFold worker on the GPU host for STEP4 jobs."
+                )
+            )
+        )
+    )
 
     user_track = Step4UserTrackPublic(
         state_id=state_id,
@@ -728,6 +777,8 @@ def get_step4_for_state(
         notes.append("STEP4 user track currently uses the primary STEP3 event only; COMPLEX events fall back to canonical transcript blocks.")
     if not jobs and can_reuse_normal_structure:
         notes.append("User protein matches the normal baseline protein; a baseline structure can be reused without a new prediction job.")
+    if global_reusable_job is not None and not can_reuse_normal_structure:
+        notes.append("A cached STEP4 structure result already exists for an identical user protein and can be reused without running a new ColabFold job.")
     if structure_prediction_message:
         notes.append(structure_prediction_message)
 
@@ -735,7 +786,7 @@ def get_step4_for_state(
         normal_structure_ready=bool(normal_track.molstar_default and normal_track.molstar_default.url),
         user_track_available=True,
         structure_prediction_enabled=structure_prediction_enabled,
-        create_job_endpoint_enabled=structure_prediction_enabled,
+        create_job_endpoint_enabled=bool(structure_prediction_enabled),
         prediction_mode=("job_queue" if structure_prediction_enabled else "disabled"),
         reason=structure_prediction_message,
     )

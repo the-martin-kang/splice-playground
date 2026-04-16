@@ -57,6 +57,59 @@ def list_jobs(*, status: Optional[str] = None, provider: Optional[str] = None, l
     return as_list(data)
 
 
+def find_jobs_by_user_protein_sha(
+    user_protein_sha256: str,
+    *,
+    provider: Optional[str] = None,
+    statuses: Optional[List[str]] = None,
+    include_payload: bool = False,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    """Find structure jobs whose result_payload stores the same user protein SHA.
+
+    We first try a PostgREST JSON-path filter. If the deployed PostgREST/Supabase
+    client rejects that syntax, we gracefully fall back to scanning a bounded list
+    of recent rows and filtering in Python. This keeps the change compatible with
+    the current deployment while still benefiting from a DB-side filter when
+    available.
+    """
+    sb = get_supabase_client()
+
+    def _base_query():
+        q = sb.table("structure_job").select(_select_clause(include_payload)).order("updated_at", desc=True).order("created_at", desc=True)
+        if provider is not None:
+            q = q.eq("provider", provider)
+        if statuses:
+            if len(statuses) == 1:
+                q = q.eq("status", statuses[0])
+            else:
+                q = q.in_("status", list(statuses))
+        return q
+
+    # Preferred: DB-side JSON-path filter
+    try:
+        q = _base_query().eq("result_payload->>user_protein_sha256", user_protein_sha256).limit(int(limit))
+        res = run_with_retry(lambda: q.execute())
+        data, _, _ = unwrap_execute_result(res)
+        return as_list(data)
+    except Exception:
+        # Fallback: bounded scan of recent jobs, then filter locally.
+        scan_limit = max(int(limit) * 20, 200)
+        q = _base_query().limit(scan_limit)
+        res = run_with_retry(lambda: q.execute())
+        data, _, _ = unwrap_execute_result(res)
+        rows = as_list(data)
+        out: List[Dict[str, Any]] = []
+        for row in rows:
+            payload = row.get("result_payload") or {}
+            if str(payload.get("user_protein_sha256") or "") != user_protein_sha256:
+                continue
+            out.append(row)
+            if len(out) >= int(limit):
+                break
+        return out
+
+
 def create_job(
     *,
     state_id: str,

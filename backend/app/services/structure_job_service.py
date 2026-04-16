@@ -7,7 +7,12 @@ from fastapi import HTTPException
 
 from app.core.config import get_settings
 from app.db.repositories.step4_baseline_repo import list_structure_assets
-from app.db.repositories.structure_job_repo import create_job, get_job, list_jobs_for_state
+from app.db.repositories.structure_job_repo import (
+    create_job,
+    find_jobs_by_user_protein_sha,
+    get_job,
+    list_jobs_for_state,
+)
 from app.schemas.step4 import CreateStep4StructureJobRequest, Step4StructureJobCreateResponse
 from app.services.protein_translation import sha256_text
 from app.services.step4_state_service import _job_public, get_step4_for_state
@@ -49,6 +54,46 @@ def _find_existing_job(
         if allow_terminal and status in TERMINAL_STATUSES:
             return row
     return None
+
+
+def _find_global_reusable_job(
+    *,
+    provider: str,
+    user_protein_sha256: str,
+) -> Optional[Dict[str, Any]]:
+    """Find an already-computed or in-flight job across *all* states for the same protein.
+
+    Preference order:
+    1. succeeded jobs with structure assets
+    2. running jobs
+    3. queued jobs
+    """
+    rows = find_jobs_by_user_protein_sha(
+        user_protein_sha256,
+        provider=provider,
+        statuses=["succeeded", "running", "queued"],
+        include_payload=True,
+        limit=25,
+    )
+    if not rows:
+        return None
+
+    def _priority(row: Dict[str, Any]) -> tuple[int, int]:
+        status = str(row.get("status") or "")
+        payload = row.get("result_payload") or {}
+        assets = payload.get("assets") or []
+        has_structure = any(isinstance(a, dict) and str(a.get("kind") or "") == "structure" for a in assets)
+        if status == "succeeded" and has_structure:
+            return (0, 0)
+        if status == "running":
+            return (1, 0)
+        if status == "queued":
+            return (2, 0)
+        return (9, 1)
+
+    rows = sorted(rows, key=_priority)
+    best = rows[0]
+    return None if _priority(best)[0] >= 9 else best
 
 
 def _baseline_reuse_payload(step4_state) -> Dict[str, Any]:
@@ -145,21 +190,36 @@ def create_step4_structure_job(state_id: str, req: CreateStep4StructureJobReques
     settings = get_settings()
     step4_state = get_step4_for_state(state_id, include_sequences=True, hydrate_jobs=False, include_latest_job_payload=False)
 
-    if not settings.STEP4_ENABLE_STRUCTURE_JOBS:
-        return Step4StructureJobCreateResponse(
-            created=False,
-            reused_baseline_structure=False,
-            message=_prediction_disabled_message(),
-            job=None,
-            user_track=step4_state.user_track,
-        )
-
     user_protein_seq = step4_state.user_track.protein_seq or ""
     if not user_protein_seq:
         raise HTTPException(status_code=400, detail="STEP4 user protein sequence is empty; create STEP4 state first and inspect translation sanity.")
 
     user_protein_sha = sha256_text(user_protein_seq)
+    provider = str(req.provider)
 
+    # 1) Same-state exact reuse first.
+    existing_same_state = None if req.force else _find_existing_job(
+        state_id=state_id,
+        provider=provider,
+        user_protein_sha256=user_protein_sha,
+        allow_terminal=True,
+    )
+    if existing_same_state:
+        status = str(existing_same_state.get("status") or "unknown")
+        message = (
+            "A STEP4 structure job with the same provider and user protein already exists for this state."
+            if status in TERMINAL_STATUSES
+            else "A matching STEP4 structure job is already queued or running for this state."
+        )
+        return Step4StructureJobCreateResponse(
+            created=False,
+            reused_baseline_structure=bool((existing_same_state.get("result_payload") or {}).get("reused_baseline_structure")),
+            message=message,
+            job=_job_public(existing_same_state),
+            user_track=step4_state.user_track,
+        )
+
+    # 2) Baseline reuse path (always allowed; no GPU needed).
     if step4_state.user_track.can_reuse_normal_structure and req.reuse_if_identical:
         existing = None if req.force else _find_existing_job(
             state_id=state_id,
@@ -189,28 +249,37 @@ def create_step4_structure_job(state_id: str, req: CreateStep4StructureJobReques
             user_track=step4_state.user_track,
         )
 
-    provider = str(req.provider)
-    existing = None if req.force else _find_existing_job(
-        state_id=state_id,
+    # 3) Cross-state dedupe by identical protein sequence.
+    existing_global = None if req.force else _find_global_reusable_job(
         provider=provider,
         user_protein_sha256=user_protein_sha,
-        allow_terminal=True,
     )
-    if existing:
-        status = str(existing.get("status") or "unknown")
-        message = (
-            "A STEP4 structure job with the same provider and user protein already exists."
-            if status in TERMINAL_STATUSES
-            else "A matching STEP4 structure job is already queued or running."
+    if existing_global is not None:
+        status = str(existing_global.get("status") or "unknown")
+        msg = (
+            "An identical user protein was predicted previously; reusing the existing structure result."
+            if status == "succeeded"
+            else "A matching user protein job already exists and is queued/running; reusing that job instead of enqueuing duplicate GPU work."
         )
         return Step4StructureJobCreateResponse(
             created=False,
             reused_baseline_structure=False,
-            message=message,
-            job=_job_public(existing),
+            message=msg,
+            job=_job_public(existing_global),
             user_track=step4_state.user_track,
         )
 
+    # 4) If prediction is disabled and no reuse path exists, stop here.
+    if not settings.STEP4_ENABLE_STRUCTURE_JOBS:
+        return Step4StructureJobCreateResponse(
+            created=False,
+            reused_baseline_structure=False,
+            message=_prediction_disabled_message(),
+            job=None,
+            user_track=step4_state.user_track,
+        )
+
+    # 5) Queue a fresh job.
     row = create_job(
         state_id=state_id,
         provider=provider,
