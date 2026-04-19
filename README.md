@@ -6,9 +6,9 @@
 - Idea: https://youtu.be/GtntQUcu39I
 
 ## User Interface
-<img width="10799" height="6728" alt="Image" src="https://github.com/user-attachments/assets/73f9ad0f-6957-40f3-836d-355cd7cc67f0" />
-<img width="7024" height="1926" alt="Image" src="https://github.com/user-attachments/assets/a3eb2ccf-d59d-4e7d-b063-dfa18a995cfd" />
-<img width="7656" height="1947" alt="Image" src="https://github.com/user-attachments/assets/43ee55ca-91cb-4604-81b7-9d3309eb0fc1" />
+<img alt="Image" src="https://github.com/user-attachments/assets/73f9ad0f-6957-40f3-836d-355cd7cc67f0" />
+<img alt="Image" src="https://github.com/user-attachments/assets/a3eb2ccf-d59d-4e7d-b063-dfa18a995cfd" />
+<img alt="Image" src="https://github.com/user-attachments/assets/43ee55ca-91cb-4604-81b7-9d3309eb0fc1" />
 
 ## Team Members
 | Name |         Role          | Student ID |               Github               |        Email         |
