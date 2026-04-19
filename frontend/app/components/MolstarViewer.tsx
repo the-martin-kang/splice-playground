@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type MolstarFormat = 'mmcif' | 'bcif' | 'pdb' | string;
 
@@ -39,6 +38,7 @@ const MOLSTAR_STYLE_HREF = '/vendor/molstar/molstar.css';
 const DEFAULT_PRIMARY_COLOR = 0x22c55e;
 const DEFAULT_SECONDARY_COLOR = 0xef4444;
 const VIEWER_HEIGHT_CLASS = 'h-[560px]';
+const USE_IFRAME_OVERLAY = process.env.NODE_ENV === 'production';
 
 function isBinaryFormat(format?: MolstarFormat | null) {
   return (format || 'mmcif') === 'bcif';
@@ -59,6 +59,43 @@ function buildIframeViewerUrl(input: MolstarStructureInput) {
   }
 
   return `/vendor/molstar/index.html?${params.toString()}`;
+}
+
+function hashSignature(value: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+function buildOverlayIframeViewerUrl(
+  primary: MolstarStructureInput,
+  secondary: MolstarStructureInput,
+  signature: string
+) {
+  const params = new URLSearchParams({
+    'hide-controls': '1',
+    'collapse-left-panel': '1',
+    'show-toggle-fullscreen': '0',
+    'primary-url': primary.url || '',
+    'primary-format': (primary.format || 'mmcif').toLowerCase(),
+    'primary-label': primary.label || 'Normal Structure',
+    'primary-chain': primary.chainId || '',
+    'primary-color': String(primary.color ?? DEFAULT_PRIMARY_COLOR),
+    'secondary-url': secondary.url || '',
+    'secondary-format': (secondary.format || 'mmcif').toLowerCase(),
+    'secondary-label': secondary.label || 'User Structure',
+    'secondary-chain': secondary.chainId || '',
+    'secondary-color': String(secondary.color ?? DEFAULT_SECONDARY_COLOR),
+    signature,
+  });
+
+  if (isBinaryFormat(primary.format)) params.set('primary-is-binary', '1');
+  if (isBinaryFormat(secondary.format)) params.set('secondary-is-binary', '1');
+
+  return `/vendor/molstar/overlay.html?${params.toString()}`;
 }
 
 async function ensureMolstarStyle() {
@@ -83,6 +120,7 @@ async function importMolstarModules() {
     compiler,
     transforms,
     tmAlignModule,
+    react18,
   ] = await Promise.all([
     import('molstar/lib/mol-plugin-ui/index.js'),
     import('molstar/lib/mol-plugin-ui/spec.js'),
@@ -93,10 +131,12 @@ async function importMolstarModules() {
     import('molstar/lib/mol-script/runtime/query/compiler.js'),
     import('molstar/lib/mol-plugin-state/transforms.js'),
     import('molstar/lib/mol-model/structure/structure/util/tm-align.js'),
+    import('molstar/lib/mol-plugin-ui/react18.js'),
   ]);
 
   return {
     createPluginUI: pluginUi.createPluginUI,
+    renderReact18: react18.renderReact18,
     DefaultPluginUISpec: spec.DefaultPluginUISpec,
     Asset: assets.Asset,
     Color: color.Color,
@@ -245,12 +285,29 @@ export default function MolstarViewer({
   const comparisonCallbackRef = useRef<typeof onComputedComparison>(onComputedComparison);
   const [viewerError, setViewerError] = useState<string | null>(null);
 
+  const overlaySignature = useMemo(
+    () => hashSignature(buildSignature(mode, primary, secondary)),
+    [
+      mode,
+      primary?.url,
+      primary?.format,
+      primary?.label,
+      primary?.chainId,
+      primary?.color,
+      secondary?.url,
+      secondary?.format,
+      secondary?.label,
+      secondary?.chainId,
+      secondary?.color,
+    ]
+  );
+
   useEffect(() => {
     comparisonCallbackRef.current = onComputedComparison;
   }, [onComputedComparison]);
 
   useEffect(() => {
-    if (mode === 'single') {
+    if (mode === 'single' || USE_IFRAME_OVERLAY) {
       pluginRef.current?.dispose?.();
       pluginRef.current = null;
       signatureRef.current = buildSignature(mode, primary, secondary);
@@ -286,9 +343,7 @@ export default function MolstarViewer({
 
         const plugin = await modules.createPluginUI({
           target: mountTarget,
-          render: (element: any, target: Element) => {
-            createRoot(target).render(element);
-          },
+          render: modules.renderReact18,
           spec: {
             ...modules.DefaultPluginUISpec(),
             layout: {
@@ -398,6 +453,41 @@ export default function MolstarViewer({
   ]);
 
   useEffect(() => {
+    if (mode !== 'overlay' || !USE_IFRAME_OVERLAY) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data as {
+        type?: string;
+        signature?: string;
+        status?: string;
+        comparison?: MolstarComputedComparison | null;
+        message?: string;
+      };
+
+      if (data?.type !== 'splice-playground-molstar-overlay') return;
+      if (data.signature !== overlaySignature) return;
+
+      if (data.status === 'comparison') {
+        setViewerError(null);
+        comparisonCallbackRef.current?.(data.comparison || null);
+        return;
+      }
+
+      if (data.status === 'error') {
+        const message = data.message || 'overlay 비교를 계산하지 못했습니다.';
+        setViewerError(message);
+        comparisonCallbackRef.current?.({
+          method: 'unavailable',
+          note: message,
+        });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [mode, overlaySignature]);
+
+  useEffect(() => {
     return () => {
       pluginRef.current?.dispose?.();
       pluginRef.current = null;
@@ -429,9 +519,25 @@ export default function MolstarViewer({
     );
   }
 
+  const overlayIframeSrc =
+    USE_IFRAME_OVERLAY && secondary?.url
+      ? buildOverlayIframeViewerUrl(primary, secondary, overlaySignature)
+      : null;
+
   return (
     <div className={`relative overflow-hidden rounded-[20px] border border-white/14 bg-slate-950/12 shadow-[0_22px_70px_rgba(15,23,42,0.12)] ${VIEWER_HEIGHT_CLASS}`}>
-      <div ref={overlayHostRef} className="h-full w-full" />
+      {overlayIframeSrc ? (
+        <iframe
+          key={overlayIframeSrc}
+          title="Protein Overlay Compare"
+          src={overlayIframeSrc}
+          className="h-full w-full border-0"
+          loading="eager"
+          allow="fullscreen"
+        />
+      ) : (
+        <div ref={overlayHostRef} className="h-full w-full" />
+      )}
       {secondary?.url ? (
         <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-wrap gap-2 text-xs text-slate-200">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1 backdrop-blur-sm">

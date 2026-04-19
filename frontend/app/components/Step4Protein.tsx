@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import MolstarViewer, { MolstarComputedComparison, MolstarStructureInput } from './MolstarViewer';
-import { API_BASE_URL } from '../lib/api';
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.splice-playground-api.com';
 
 type StructureStrategy = 'reuse_baseline' | 'predict_user_structure';
 
@@ -194,7 +196,7 @@ function statusClassName(status: string) {
   if (['completed', 'succeeded', 'success'].includes(normalized)) {
     return 'border-emerald-300/40 bg-emerald-100/15 text-emerald-50';
   }
-  if (['failed', 'error', 'cancelled', 'canceled'].includes(normalized)) {
+  if (['failed', 'error', 'cancelled'].includes(normalized)) {
     return 'border-rose-300/35 bg-rose-100/10 text-rose-900';
   }
   return 'border-amber-300/35 bg-amber-100/10 text-amber-900';
@@ -205,18 +207,8 @@ function isTerminalJob(job: Step4StructureJob) {
   return (
     !!job.error_message ||
     !!job.molstar_default?.url ||
-    ['completed', 'succeeded', 'success', 'failed', 'error', 'cancelled', 'canceled'].includes(normalized)
+    ['completed', 'succeeded', 'success', 'failed', 'error', 'cancelled'].includes(normalized)
   );
-}
-
-function normalizeStructureUrl(url?: string | null) {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    return `${parsed.origin}${parsed.pathname}`;
-  } catch {
-    return url.split('?')[0] || url;
-  }
 }
 
 function extractApiMessage(payload: unknown) {
@@ -248,9 +240,6 @@ function mergeMolstarTarget(previous: MolstarTarget | null, next: MolstarTarget 
     next.structure_asset_id &&
     previous.structure_asset_id === next.structure_asset_id
   ) {
-    return previous;
-  }
-  if (previous?.url && normalizeStructureUrl(previous.url) === normalizeStructureUrl(next.url)) {
     return previous;
   }
   return next;
@@ -302,7 +291,7 @@ function buildJobProgress(
     };
   }
 
-  if (['failed', 'error', 'cancelled', 'canceled'].includes(status)) {
+  if (['failed', 'error', 'cancelled'].includes(status)) {
     return {
       tone: 'rose' as const,
       title: 'ColabFold 예측이 실패했습니다.',
@@ -366,13 +355,6 @@ export default function Step4Protein() {
   const [step3EventHeadline, setStep3EventHeadline] = useState<string | null>(null);
   const [step3AffectedSummary, setStep3AffectedSummary] = useState<string | null>(null);
   const hasInitializedViewRef = useRef(false);
-  const hasAutoShiftedToUserViewRef = useRef(false);
-  const previousUserTargetIdentityRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    hasAutoShiftedToUserViewRef.current = false;
-    previousUserTargetIdentityRef.current = null;
-  }, [stateId]);
 
   useEffect(() => {
     try {
@@ -496,9 +478,7 @@ export default function Step4Protein() {
   useEffect(() => {
     if (!job?.job_id || isTerminalJob(job)) return;
 
-    let disposed = false;
-
-    const pollJob = async () => {
+    const timer = window.setInterval(async () => {
       try {
         const response = await fetch(
           `${API_BASE_URL}/api/step4-jobs/${encodeURIComponent(job.job_id)}?include_payload=false`
@@ -508,54 +488,17 @@ export default function Step4Protein() {
           throw new Error(extractApiMessage(payload) || `HTTP error! status: ${response.status}`);
         }
         const refreshedJob = payload as Step4StructureJob;
-        if (disposed) return;
         setJob((prev) => ({ ...(prev || {}), ...refreshedJob } as Step4StructureJob));
         if (refreshedJob.molstar_default?.url) {
           setStableUserTarget((prev) => mergeMolstarTarget(prev, refreshedJob.molstar_default || null));
         }
-        if (isTerminalJob(refreshedJob)) {
-          window.clearInterval(timer);
-          void fetchStep4(false);
-        }
       } catch (pollError) {
-        if (disposed) return;
         setJobError(formatError(pollError));
       }
-    };
-
-    const timer = window.setInterval(() => {
-      void pollJob();
     }, 8000);
 
-    void pollJob();
-
-    return () => {
-      disposed = true;
-      window.clearInterval(timer);
-    };
+    return () => window.clearInterval(timer);
   }, [job?.job_id, job?.status, job?.error_message, job?.molstar_default?.url]);
-
-  useEffect(() => {
-    const userTargetUrl =
-      stableUserTarget?.url ||
-      (step4Data?.user_track.comparison_to_normal.same_as_normal ? stableNormalTarget?.url || null : null);
-    const nextIdentity = normalizeStructureUrl(userTargetUrl);
-
-    if (!step4Data || !stableNormalTarget?.url || !nextIdentity) {
-      previousUserTargetIdentityRef.current = nextIdentity;
-      return;
-    }
-
-    const previousIdentity = previousUserTargetIdentityRef.current;
-    previousUserTargetIdentityRef.current = nextIdentity;
-
-    if (hasAutoShiftedToUserViewRef.current || previousIdentity === nextIdentity) {
-      return;
-    }
-
-    setActiveStructureView(step4Data.user_track.comparison_to_normal.same_as_normal ? 'user' : 'overlay');
-    hasAutoShiftedToUserViewRef.current = true;
-  }, [stableNormalTarget?.url, stableUserTarget?.url, step4Data?.user_track.comparison_to_normal.same_as_normal]);
 
   if (isLoading) {
     return (
@@ -628,17 +571,25 @@ export default function Step4Protein() {
         }
       : null);
 
-  const structureSimilarityScore = structureComparison
-    ? Math.max(structureComparison.tm_score_1 ?? 0, structureComparison.tm_score_2 ?? 0)
+  const hasStructureScore =
+    structureComparison?.tm_score_1 != null || structureComparison?.tm_score_2 != null;
+
+  const structureSimilarityScore = hasStructureScore
+    ? Math.max(structureComparison?.tm_score_1 ?? 0, structureComparison?.tm_score_2 ?? 0)
     : null;
+  const structureScoreLabel =
+    structureComparison?.method === 'tm-align'
+      ? 'TM-score'
+      : structureComparison?.method === 'sequence-align'
+        ? 'TM-like score'
+        : '3D score';
 
   const singleDisplayedTarget =
     activeStructureView === 'user' && userViewerTarget ? userViewerTarget : normalViewerTarget;
 
   const transcriptBlocks = step4Data.user_track.predicted_transcript.blocks;
   const excludedExons = step4Data.user_track.predicted_transcript.excluded_exon_numbers || [];
-  const excludedExonSet = new Set(excludedExons);
-  const involvedExons = Array.from(new Set(step3AffectedExons.filter((exonNo) => !excludedExonSet.has(exonNo))));
+  const highlightedExons = Array.from(new Set([...step3AffectedExons, ...excludedExons]));
   const transcriptHeadline = step3EventHeadline || step3AffectedSummary || null;
 
   const progress = buildJobProgress(job, step4Data, Boolean(userViewerTarget?.url));
@@ -677,7 +628,7 @@ export default function Step4Protein() {
           <div className="rounded-[18px] border border-white/16 bg-white/5 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-600">Structure Similarity</p>
             <p className="mt-3 text-3xl font-black text-slate-950">{formatPercent(structureSimilarityScore)}</p>
-            <p className="mt-2 text-xs text-slate-600">TM-score max 기준 · AA 유사도 {formatPercent(comparison.normalized_edit_similarity)}</p>
+            <p className="mt-2 text-xs text-slate-600">3D 정렬 score max 기준 · AA 유사도 {formatPercent(comparison.normalized_edit_similarity)}</p>
           </div>
         </section>
 
@@ -686,7 +637,7 @@ export default function Step4Protein() {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-black text-slate-950">Mol* Structure Viewer</h2>
-                <p className="mt-1 text-sm text-slate-800">정상 구조는 초록, 생성 구조는 빨강으로 표시하며, overlay 모드에서는 브라우저에서 TM-align으로 직접 겹쳐 비교합니다.</p>
+                <p className="mt-1 text-sm text-slate-800">정상 구조는 초록, 생성 구조는 빨강으로 표시하며, overlay 모드에서는 브라우저에서 두 구조를 직접 정렬해 겹쳐 비교합니다.</p>
               </div>
               <div className="relative z-10 flex flex-wrap gap-2">
                 <button
@@ -728,7 +679,11 @@ export default function Step4Protein() {
                 </p>
                 <p className="mt-2 text-slate-700">
                   {activeStructureView === 'overlay'
-                    ? 'TM-align based superposition'
+                    ? structureComparison?.method === 'tm-align'
+                      ? 'TM-align based superposition'
+                      : structureComparison?.method === 'sequence-align'
+                        ? 'C-alpha sequence-aligned superposition'
+                        : 'Structure overlay compare'
                     : `${activeStructureView === 'user' ? userStructureTarget?.provider || '-' : normalStructureTarget?.provider || '-'} / ${activeStructureView === 'user' ? userStructureTarget?.source_db || '-' : normalStructureTarget?.source_db || '-'}`}
                 </p>
                 <p className="mt-1 text-slate-700">
@@ -791,7 +746,7 @@ export default function Step4Protein() {
                 <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>First AA Mismatch</span><span className="font-semibold">{comparison.first_mismatch_aa_1 ?? '-'}</span></div>
                 <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>CDS Length</span><span className="font-semibold">{translation.cds_length_nt ?? '-'} nt</span></div>
                 <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>AA Similarity</span><span className="font-semibold">{formatPercent(comparison.normalized_edit_similarity)}</span></div>
-                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>3D Similarity (TM-score max)</span><span className="font-semibold">{formatPercent(structureSimilarityScore)}</span></div>
+                <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>3D Similarity Score</span><span className="font-semibold">{formatPercent(structureSimilarityScore)}</span></div>
               </div>
 
               {(jobMessage || jobError) && (
@@ -821,22 +776,14 @@ export default function Step4Protein() {
                   {transcriptHeadline}
                 </p>
               ) : null}
-              {excludedExons.length > 0 || involvedExons.length > 0 ? (
+              {highlightedExons.length > 0 ? (
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-800">
-                  {excludedExons.map((exonNo) => (
+                  {highlightedExons.map((exonNo) => (
                     <span
-                      key={`excluded-exon-${exonNo}`}
+                      key={`affected-exon-${exonNo}`}
                       className="rounded-full border border-rose-300/35 bg-rose-100/10 px-3 py-1 font-semibold text-rose-900"
                     >
-                      Exon {exonNo} excluded
-                    </span>
-                  ))}
-                  {involvedExons.map((exonNo) => (
-                    <span
-                      key={`involved-exon-${exonNo}`}
-                      className="rounded-full border border-amber-300/35 bg-amber-100/10 px-3 py-1 font-semibold text-amber-900"
-                    >
-                      Exon {exonNo} involved
+                      Exon {exonNo} affected
                     </span>
                   ))}
                 </div>
@@ -844,13 +791,11 @@ export default function Step4Protein() {
               <div className="mt-4 flex max-h-[280px] flex-wrap gap-2 overflow-y-auto pr-1">
                 {transcriptBlocks.map((block) => {
                   const exonNumber = block.canonical_exon_number ?? null;
-                  const isExcludedCanonical = exonNumber != null && excludedExonSet.has(exonNumber);
+                  const isAffectedCanonical = exonNumber != null && highlightedExons.includes(exonNumber);
                   const blockClass =
                     block.block_kind === 'pseudo_exon'
                       ? 'border-amber-300/35 bg-amber-100/10 text-amber-900'
-                      : block.block_kind === 'boundary_shift'
-                        ? 'border-cyan-300/35 bg-cyan-100/10 text-cyan-900'
-                      : isExcludedCanonical
+                      : isAffectedCanonical
                         ? 'border-rose-300/35 bg-rose-100/10 text-rose-900'
                         : 'border-white/14 bg-white/5 text-slate-800';
                   return (
@@ -870,8 +815,8 @@ export default function Step4Protein() {
                 <h2 className="text-xl font-black text-slate-950">Structure Comparison (3D)</h2>
                 {structureComparison?.method ? <div className="mb-3 rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-xs text-slate-700">Method: {structureComparison.method}</div> : null}
                 <div className="mt-4 space-y-3 text-sm text-slate-800">
-                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>TM-score 1</span><span className="font-semibold">{formatNumber(structureComparison.tm_score_1, 3)}</span></div>
-                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>TM-score 2</span><span className="font-semibold">{formatNumber(structureComparison.tm_score_2, 3)}</span></div>
+                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>{structureScoreLabel} 1</span><span className="font-semibold">{formatNumber(structureComparison.tm_score_1, 3)}</span></div>
+                  <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>{structureScoreLabel} 2</span><span className="font-semibold">{formatNumber(structureComparison.tm_score_2, 3)}</span></div>
                   <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>RMSD</span><span className="font-semibold">{formatNumber(structureComparison.rmsd, 3)}</span></div>
                   <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/5 px-4 py-3"><span>Aligned Length</span><span className="font-semibold">{structureComparison.aligned_length ?? '-'}</span></div>
                 </div>
