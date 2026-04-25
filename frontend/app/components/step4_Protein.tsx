@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import MolstarViewer, { MolstarComputedComparison, MolstarStructureInput } from './MolstarViewer';
+import MolstarViewer, { MolstarComputedComparison, MolstarStructureInput } from './molstar/MolstarViewer';
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.splice-playground-api.com';
 
+// Step 4 data contracts: structure assets, prediction jobs, transcript/translation summaries, and API response shape.
 type StructureStrategy = 'reuse_baseline' | 'predict_user_structure';
 
 interface MolstarTarget {
@@ -169,6 +170,7 @@ interface Step3Snapshot {
   };
 }
 
+// LOGIC helpers: formatting, job status classification, API message extraction, and stable Mol* target merging.
 function formatError(error: unknown) {
   if (error instanceof Error) return error.message;
   return '요청 중 오류가 발생했습니다.';
@@ -319,6 +321,7 @@ function buildJobProgress(
   };
 }
 
+// UI helper: choose progress card styling from job/progress tone.
 function progressCardClasses(tone: 'slate' | 'amber' | 'emerald' | 'rose') {
   switch (tone) {
     case 'emerald':
@@ -333,6 +336,7 @@ function progressCardClasses(tone: 'slate' | 'amber' | 'emerald' | 'rose') {
 }
 
 export default function Step4Protein() {
+  // LOGIC: route params, Step 4 API state, structure job state, viewer target state, and Step 3 summary state.
   const router = useRouter();
   const searchParams = useSearchParams();
   const diseaseId = searchParams.get('disease_id');
@@ -356,6 +360,7 @@ export default function Step4Protein() {
   const [step3AffectedSummary, setStep3AffectedSummary] = useState<string | null>(null);
   const hasInitializedViewRef = useRef(false);
 
+  // LOGIC: read Step 3 snapshot from localStorage to enrich the Step 4 summary UI.
   useEffect(() => {
     try {
       const saved = localStorage.getItem('step3Data');
@@ -378,6 +383,7 @@ export default function Step4Protein() {
     }
   }, []);
 
+  // LOGIC: receive frontend Mol* overlay comparison and normalize it into Step 4 comparison shape.
   const handleComputedComparison = useCallback((nextComparison: MolstarComputedComparison | null) => {
     if (!nextComparison) {
       setFrontendStructureComparison(null);
@@ -392,6 +398,7 @@ export default function Step4Protein() {
     });
   }, []);
 
+  // LOGIC: fetch Step 4 state payload and stabilize Mol* structure targets across refreshes.
   const fetchStep4 = async (showLoading = true) => {
     if (!stateId) return;
     if (showLoading) setIsLoading(true);
@@ -425,6 +432,7 @@ export default function Step4Protein() {
     }
   };
 
+  // LOGIC: initial Step 4 load once disease_id/state_id are available.
   useEffect(() => {
     if (!diseaseId || !stateId) {
       setError('step4에 필요한 disease_id 또는 state_id가 없습니다.');
@@ -434,6 +442,7 @@ export default function Step4Protein() {
     void fetchStep4(true);
   }, [diseaseId, stateId]);
 
+  // LOGIC: create a user structure prediction job through the backend.
   const createStructureJob = async () => {
     if (!stateId) return;
     setIsSubmittingJob(true);
@@ -464,6 +473,7 @@ export default function Step4Protein() {
     }
   };
 
+  // LOGIC: automatically create a prediction job when backend strategy requires it.
   useEffect(() => {
     if (!step4Data) return;
     if (job) return;
@@ -475,6 +485,7 @@ export default function Step4Protein() {
     void createStructureJob();
   }, [step4Data, job, hasAutoSubmittedJob]);
 
+  // LOGIC: poll an in-progress structure prediction job until it becomes terminal.
   useEffect(() => {
     if (!job?.job_id || isTerminalJob(job)) return;
 
@@ -500,6 +511,7 @@ export default function Step4Protein() {
     return () => window.clearInterval(timer);
   }, [job?.job_id, job?.status, job?.error_message, job?.molstar_default?.url]);
 
+  // UI: Step 4 loading and fatal error states.
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-transparent px-4">
@@ -594,6 +606,7 @@ export default function Step4Protein() {
 
   const progress = buildJobProgress(job, step4Data, Boolean(userViewerTarget?.url));
 
+  // UI: Step 4 dashboard, Mol* viewer controls, translation summary, job controls, and transcript/structure metrics.
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-transparent px-4 py-8 pb-16 sm:px-6 lg:px-8">
       <div className="relative mx-auto max-w-7xl space-y-8">

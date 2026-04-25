@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import Step4Protein from '../components/Step4Protein';
+import Step4ProteinStructure from '../components/step4/Step4ProteinStructure';
 
 function Loading() {
   return (
@@ -17,7 +17,7 @@ function Loading() {
 export default function Step4Page() {
   return (
     <Suspense fallback={<Loading />}>
-      <Step4Protein />
+      <Step4ProteinStructure />
     </Suspense>
   );
 }

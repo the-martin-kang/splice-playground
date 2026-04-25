@@ -1,10 +1,10 @@
 'use client';
 
 import { Suspense } from 'react';
-import DNAManipulator from '../components/DNAManipulator';
+import Step2DnaEditor from '../components/step2/Step2DnaEditor';
 
 function Step2Content() {
-  return <DNAManipulator />;
+  return <Step2DnaEditor />;
 }
 
 export default function Step2Page() {

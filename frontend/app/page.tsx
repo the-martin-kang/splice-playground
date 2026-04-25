@@ -1,15 +1,21 @@
 import Link from 'next/link';
+import { Roboto } from 'next/font/google';
+
+const roboto = Roboto({
+  subsets: ['latin'],
+  weight: ['400'],
+});
 
 export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
       <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center justify-center">
         <section className="w-full max-w-4xl px-6 py-10 text-center sm:px-10 sm:py-14">
-          <div className="mx-auto mb-6 inline-flex px-4 py-1 text-xs font-semibold uppercase tracking-[0.38em] text-slate-100 [text-shadow:0_8px_28px_rgba(15,23,42,0.55)]">
+          <div className="mx-auto mb-6 inline-flex px-4 py-1 text-xs font-semibold uppercase tracking-[0.38em] text-slate-950">
             Splice Playground
           </div>
 
-          <h1 className="mx-auto max-w-4xl text-5xl font-black tracking-[-0.05em] text-white [text-shadow:0_18px_50px_rgba(15,23,42,0.58)] sm:text-7xl lg:text-8xl">
+          <h1 className={`${roboto.className} mx-auto max-w-4xl text-5xl font-black tracking-wide text-slate-950 sm:text-7xl lg:text-8xl`}>
             Visualize
             <br />
             Splicing Into
@@ -17,7 +23,7 @@ export default function Home() {
             Structure
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-slate-100 [text-shadow:0_10px_34px_rgba(15,23,42,0.58)] sm:text-lg">
+          <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-slate-900 sm:text-lg">
             DNA editing, transcript consequences, and protein structure prediction in one continuous flow.
           </p>
 

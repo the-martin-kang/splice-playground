@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import MatureMRNA from '../components/MatureMRNA';
+import Step3MatureMrna from '../components/step3/Step3MatureMrna';
 
 function Loading() {
   return (
@@ -17,7 +17,7 @@ function Loading() {
 export default function Step3Page() {
   return (
     <Suspense fallback={<Loading />}>
-      <MatureMRNA />
+      <Step3MatureMrna />
     </Suspense>
   );
 }
