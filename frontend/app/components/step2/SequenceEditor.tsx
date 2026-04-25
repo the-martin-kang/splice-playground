@@ -1,4 +1,6 @@
-import type { RefObject } from 'react';
+'use client';
+
+import { useLayoutEffect, useRef, type RefObject } from 'react';
 import SequenceDiffView from './SequenceDiffView';
 import type { DifferenceSummary, Region } from './types';
 
@@ -9,6 +11,7 @@ interface SequenceEditorProps {
   currentOriginalSequence: string;
   editorDisplaySequence: string;
   editorDisplayOriginalSequence: string;
+  onEditorLineLengthChange: (lineLength: number) => void;
   differenceSummary: DifferenceSummary;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   editorBackdropRef: RefObject<HTMLDivElement | null>;
@@ -28,6 +31,7 @@ export default function SequenceEditor({
   currentOriginalSequence,
   editorDisplaySequence,
   editorDisplayOriginalSequence,
+  onEditorLineLengthChange,
   differenceSummary,
   textareaRef,
   editorBackdropRef,
@@ -39,6 +43,50 @@ export default function SequenceEditor({
   onTextareaFallbackChange,
   onEditorScroll,
 }: SequenceEditorProps) {
+  const editorFrameRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (!selectedRegion || typeof window === 'undefined') return;
+
+    const measureLineLength = () => {
+      const frame = editorFrameRef.current;
+      if (!frame) return;
+
+      const textElement = textareaRef.current ?? frame;
+      const textStyle = window.getComputedStyle(textElement);
+      const usableWidth = Math.max(0, frame.clientWidth - 40);
+
+      const probe = document.createElement('span');
+      probe.textContent = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+      probe.style.position = 'absolute';
+      probe.style.visibility = 'hidden';
+      probe.style.whiteSpace = 'pre';
+      probe.style.font = textStyle.font;
+      probe.style.letterSpacing = textStyle.letterSpacing;
+      probe.style.fontVariantLigatures = 'none';
+      document.body.appendChild(probe);
+
+      const measuredWidth = probe.getBoundingClientRect().width;
+      probe.remove();
+
+      const charWidth = measuredWidth > 0 ? measuredWidth / 32 : 8;
+      const lineLength = Math.floor(usableWidth / charWidth) - 1;
+      onEditorLineLengthChange(lineLength);
+    };
+
+    measureLineLength();
+
+    const frame = editorFrameRef.current;
+    if (frame && typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measureLineLength);
+      observer.observe(frame);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener('resize', measureLineLength);
+    return () => window.removeEventListener('resize', measureLineLength);
+  }, [onEditorLineLengthChange, selectedRegion, textareaRef]);
+
   if (!selectedRegion) {
     return (
       <div className="mt-14 rounded-[20px] border border-dashed border-white/16 bg-white/5 p-8 text-center text-slate-800 backdrop-blur-sm">
@@ -81,10 +129,10 @@ export default function SequenceEditor({
             </button>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
-            <div>
+          <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+            <div className="min-w-0">
               <p className="mb-1 text-sm font-semibold text-slate-800">정상 서열 (Reference)</p>
-              <div className="max-h-40 overflow-auto rounded-xl border border-white/16 bg-white/5 p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] break-all whitespace-pre-wrap [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65">
+              <div className="max-h-40 min-w-0 overflow-auto overflow-x-hidden rounded-xl border border-white/16 bg-white/5 p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] break-all whitespace-pre-wrap [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65">
                 {currentOriginalSequence
                   ? (
                     <SequenceDiffView
@@ -99,13 +147,16 @@ export default function SequenceEditor({
               </div>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="mb-1 text-sm font-semibold text-cyan-800">편집 서열 (고정 길이 overwrite 모드)</p>
-              <div className="relative overflow-hidden rounded-xl border border-white/16 bg-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+              <div
+                ref={editorFrameRef}
+                className="relative min-w-0 overflow-hidden rounded-xl border border-white/16 bg-white/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+              >
                 <div
                   ref={editorBackdropRef}
                   aria-hidden="true"
-                  className="pointer-events-none max-h-56 overflow-auto p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] whitespace-pre [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
+                  className="pointer-events-none max-h-56 min-w-0 overflow-y-auto overflow-x-hidden p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] whitespace-pre [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
                 >
                   <SequenceDiffView
                     source={editorDisplaySequence}
@@ -128,7 +179,7 @@ export default function SequenceEditor({
                   onPaste={onPaste}
                   onChange={onTextareaFallbackChange}
                   onScroll={onEditorScroll}
-                  className="absolute inset-0 min-h-full w-full resize-none overflow-auto whitespace-pre bg-transparent p-4 font-mono text-sm leading-6 tracking-normal text-transparent [font-variant-ligatures:none] caret-slate-950 outline-none selection:bg-cyan-200/40 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
+                  className="absolute inset-0 min-h-full w-full min-w-0 resize-none overflow-y-auto overflow-x-hidden whitespace-pre bg-transparent p-4 font-mono text-sm leading-6 tracking-normal text-transparent [font-variant-ligatures:none] caret-slate-950 outline-none selection:bg-cyan-200/40 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
                 />
               </div>
               <p className="mt-2 text-xs text-slate-700">

@@ -93,6 +93,7 @@ export default function Step2DnaEditor() {
             currentOriginalSequence={sequenceEditor.currentOriginalSequence}
             editorDisplaySequence={sequenceEditor.editorDisplaySequence}
             editorDisplayOriginalSequence={sequenceEditor.editorDisplayOriginalSequence}
+            onEditorLineLengthChange={sequenceEditor.handleEditorLineLengthChange}
             differenceSummary={sequenceEditor.differenceSummary}
             textareaRef={sequenceEditor.textareaRef}
             editorBackdropRef={sequenceEditor.editorBackdropRef}

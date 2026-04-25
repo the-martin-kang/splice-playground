@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE_URL } from '../../lib/api';
 import {
   BASE_MAP,
@@ -11,14 +11,22 @@ import {
 } from './dnaEditing';
 import type { DifferenceSummary, DiseaseDetail, Region, RegionData } from './types';
 
-const EDITOR_LINE_LENGTH = 64;
+const DEFAULT_EDITOR_LINE_LENGTH = 64;
+const MIN_EDITOR_LINE_LENGTH = 24;
+const MAX_EDITOR_LINE_LENGTH = 96;
 
-function formatSequenceForEditor(sequence: string): string {
+function clampEditorLineLength(lineLength: number): number {
+  if (!Number.isFinite(lineLength)) return DEFAULT_EDITOR_LINE_LENGTH;
+  return Math.max(MIN_EDITOR_LINE_LENGTH, Math.min(MAX_EDITOR_LINE_LENGTH, Math.floor(lineLength)));
+}
+
+function formatSequenceForEditor(sequence: string, lineLength: number): string {
   if (!sequence) return '';
 
+  const safeLineLength = clampEditorLineLength(lineLength);
   const chunks: string[] = [];
-  for (let i = 0; i < sequence.length; i += EDITOR_LINE_LENGTH) {
-    chunks.push(sequence.slice(i, i + EDITOR_LINE_LENGTH));
+  for (let i = 0; i < sequence.length; i += safeLineLength) {
+    chunks.push(sequence.slice(i, i + safeLineLength));
   }
   return chunks.join('\n');
 }
@@ -27,31 +35,33 @@ function clampRawCaret(rawIndex: number, sequenceLength: number): number {
   return Math.max(0, Math.min(sequenceLength, rawIndex));
 }
 
-function rawIndexToEditorCaret(rawIndex: number, sequenceLength: number): number {
+function rawIndexToEditorCaret(rawIndex: number, sequenceLength: number, lineLength: number): number {
   const clamped = clampRawCaret(rawIndex, sequenceLength);
   if (clamped <= 0 || sequenceLength <= 0) return 0;
 
   // Newlines are inserted only between chunks, never after the final chunk.
-  const maxLineBreaks = Math.floor((sequenceLength - 1) / EDITOR_LINE_LENGTH);
-  const lineBreaksBeforeCaret = Math.min(Math.floor(clamped / EDITOR_LINE_LENGTH), maxLineBreaks);
+  const safeLineLength = clampEditorLineLength(lineLength);
+  const maxLineBreaks = Math.floor((sequenceLength - 1) / safeLineLength);
+  const lineBreaksBeforeCaret = Math.min(Math.floor(clamped / safeLineLength), maxLineBreaks);
   return clamped + lineBreaksBeforeCaret;
 }
 
-function editorCaretToRawIndex(editorIndex: number, sequenceLength: number): number {
+function editorCaretToRawIndex(editorIndex: number, sequenceLength: number, lineLength: number): number {
   if (editorIndex <= 0) return 0;
 
-  // Each complete displayed line is 64 bases plus one inserted newline.
-  // If the caret is on the newline itself or just after it, both positions map
-  // to the same raw boundary between two bases.
-  const rawIndex = editorIndex - Math.floor(editorIndex / (EDITOR_LINE_LENGTH + 1));
+  // Each complete displayed line is N bases plus one inserted newline. If the
+  // caret is on the newline itself or just after it, both positions map to the
+  // same raw boundary between two bases.
+  const safeLineLength = clampEditorLineLength(lineLength);
+  const rawIndex = editorIndex - Math.floor(editorIndex / (safeLineLength + 1));
   return clampRawCaret(rawIndex, sequenceLength);
 }
 
-function editorSelectionToRawRange(target: HTMLTextAreaElement, sequenceLength: number) {
+function editorSelectionToRawRange(target: HTMLTextAreaElement, sequenceLength: number, lineLength: number) {
   const editorStart = target.selectionStart ?? 0;
   const editorEnd = target.selectionEnd ?? editorStart;
-  const start = editorCaretToRawIndex(Math.min(editorStart, editorEnd), sequenceLength);
-  const end = editorCaretToRawIndex(Math.max(editorStart, editorEnd), sequenceLength);
+  const start = editorCaretToRawIndex(Math.min(editorStart, editorEnd), sequenceLength, lineLength);
+  const end = editorCaretToRawIndex(Math.max(editorStart, editorEnd), sequenceLength, lineLength);
   return { start, end };
 }
 
@@ -67,6 +77,7 @@ export function useRegionSequenceEditor(
   const [originalSequences, setOriginalSequences] = useState<{ [regionId: string]: string }>({});
   const [snvSequences, setSnvSequences] = useState<{ [regionId: string]: string }>({});
   const [currentSequence, setCurrentSequence] = useState('');
+  const [editorLineLength, setEditorLineLengthState] = useState(DEFAULT_EDITOR_LINE_LENGTH);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const editorBackdropRef = useRef<HTMLDivElement | null>(null);
@@ -79,10 +90,10 @@ export function useRegionSequenceEditor(
     currentSequenceRef.current = currentSequence;
     if (pendingCaretRef.current == null || !textareaRef.current) return;
 
-    const displayCaret = rawIndexToEditorCaret(pendingCaretRef.current, currentSequence.length);
+    const displayCaret = rawIndexToEditorCaret(pendingCaretRef.current, currentSequence.length, editorLineLength);
     textareaRef.current.setSelectionRange(displayCaret, displayCaret);
     pendingCaretRef.current = null;
-  }, [currentSequence]);
+  }, [currentSequence, editorLineLength]);
 
   const autoApplyDiseaseSnv = (diseaseDetail?.disease.seed_mode || 'apply_alt') !== 'reference_is_current';
 
@@ -106,7 +117,7 @@ export function useRegionSequenceEditor(
     if (typeof window === 'undefined') return;
     window.requestAnimationFrame(() => {
       if (pendingCaretRef.current !== caret || !textareaRef.current) return;
-      const displayCaret = rawIndexToEditorCaret(caret, currentSequenceRef.current.length);
+      const displayCaret = rawIndexToEditorCaret(caret, currentSequenceRef.current.length, editorLineLength);
       textareaRef.current.setSelectionRange(displayCaret, displayCaret);
       pendingCaretRef.current = null;
     });
@@ -143,13 +154,30 @@ export function useRegionSequenceEditor(
     return guard;
   };
 
+  const handleEditorLineLengthChange = useCallback((lineLength: number) => {
+    const nextLineLength = clampEditorLineLength(lineLength);
+    setEditorLineLengthState(prevLineLength => {
+      if (prevLineLength === nextLineLength) return prevLineLength;
+
+      if (textareaRef.current) {
+        pendingCaretRef.current = editorCaretToRawIndex(
+          textareaRef.current.selectionStart ?? 0,
+          currentSequenceRef.current.length,
+          prevLineLength
+        );
+      }
+
+      return nextLineLength;
+    });
+  }, []);
+
   const reconcileNativeTextareaChange = (
     previous: string,
     nativeDisplayValue: string,
     nativeSelectionStart: number
   ) => {
     const nativeRawValue = normalizeBases(nativeDisplayValue);
-    const nativeRawCaret = editorCaretToRawIndex(nativeSelectionStart, nativeRawValue.length || previous.length);
+    const nativeRawCaret = editorCaretToRawIndex(nativeSelectionStart, nativeRawValue.length || previous.length, editorLineLength);
 
     if (nativeRawValue === previous) {
       return { next: previous, caret: clampRawCaret(nativeRawCaret, previous.length) };
@@ -282,7 +310,7 @@ export function useRegionSequenceEditor(
     const regionId = selectedRegion.region_id;
     const sequence = currentSequenceRef.current;
     const target = event.currentTarget;
-    const { start, end } = editorSelectionToRawRange(target, sequence.length);
+    const { start, end } = editorSelectionToRawRange(target, sequence.length, editorLineLength);
     const lowerKey = event.key.toLowerCase();
     const blockedKeys = new Set([
       'Shift', 'CapsLock', 'Alt', 'AltGraph', 'Control', 'Meta',
@@ -395,7 +423,7 @@ export function useRegionSequenceEditor(
     const regionId = selectedRegion.region_id;
     const sequence = currentSequenceRef.current;
     const target = event.currentTarget;
-    const { start, end } = editorSelectionToRawRange(target, sequence.length);
+    const { start, end } = editorSelectionToRawRange(target, sequence.length, editorLineLength);
 
     if (inputType === 'insertLineBreak') {
       event.preventDefault();
@@ -461,7 +489,7 @@ export function useRegionSequenceEditor(
     const regionId = selectedRegion.region_id;
     const sequence = currentSequenceRef.current;
     const target = event.currentTarget;
-    const { start, end } = editorSelectionToRawRange(target, sequence.length);
+    const { start, end } = editorSelectionToRawRange(target, sequence.length, editorLineLength);
     const pasted = normalizeBases(event.clipboardData.getData('text'));
 
     if (!pasted) {
@@ -516,12 +544,12 @@ export function useRegionSequenceEditor(
   const currentOriginalSequence = selectedRegion ? originalSequences[selectedRegion.region_id] || '' : '';
   const currentBaseSequence = selectedRegion ? baseSequenceForRegion(selectedRegion.region_id) : '';
   const editorDisplaySequence = useMemo(
-    () => formatSequenceForEditor(currentSequence),
-    [currentSequence]
+    () => formatSequenceForEditor(currentSequence, editorLineLength),
+    [currentSequence, editorLineLength]
   );
   const editorDisplayOriginalSequence = useMemo(
-    () => formatSequenceForEditor(currentOriginalSequence),
-    [currentOriginalSequence]
+    () => formatSequenceForEditor(currentOriginalSequence, editorLineLength),
+    [currentOriginalSequence, editorLineLength]
   );
 
   // LOGIC: compute live diff counts shown in the editor summary chips.
@@ -546,6 +574,7 @@ export function useRegionSequenceEditor(
     currentOriginalSequence,
     editorDisplaySequence,
     editorDisplayOriginalSequence,
+    handleEditorLineLengthChange,
     differenceSummary,
     textareaRef,
     editorBackdropRef,
