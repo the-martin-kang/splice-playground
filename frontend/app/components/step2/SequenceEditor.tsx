@@ -7,6 +7,8 @@ interface SequenceEditorProps {
   isRegionLoading: boolean;
   currentSequence: string;
   currentOriginalSequence: string;
+  editorDisplaySequence: string;
+  editorDisplayOriginalSequence: string;
   differenceSummary: DifferenceSummary;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   editorBackdropRef: RefObject<HTMLDivElement | null>;
@@ -24,6 +26,8 @@ export default function SequenceEditor({
   isRegionLoading,
   currentSequence,
   currentOriginalSequence,
+  editorDisplaySequence,
+  editorDisplayOriginalSequence,
   differenceSummary,
   textareaRef,
   editorBackdropRef,
@@ -101,11 +105,11 @@ export default function SequenceEditor({
                 <div
                   ref={editorBackdropRef}
                   aria-hidden="true"
-                  className="pointer-events-none max-h-56 overflow-auto p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] break-all whitespace-pre-wrap [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
+                  className="pointer-events-none max-h-56 overflow-auto p-4 font-mono text-sm leading-6 tracking-normal text-slate-950 [font-variant-ligatures:none] whitespace-pre [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
                 >
                   <SequenceDiffView
-                    source={currentSequence}
-                    compareTo={currentOriginalSequence}
+                    source={editorDisplaySequence}
+                    compareTo={editorDisplayOriginalSequence}
                     options={{
                       changedClassName: 'bg-amber-300/55 text-slate-950',
                     }}
@@ -113,7 +117,8 @@ export default function SequenceEditor({
                 </div>
                 <textarea
                   ref={textareaRef}
-                  value={currentSequence}
+                  value={editorDisplaySequence}
+                  wrap="off"
                   spellCheck={false}
                   autoCapitalize="off"
                   autoCorrect="off"
@@ -123,7 +128,7 @@ export default function SequenceEditor({
                   onPaste={onPaste}
                   onChange={onTextareaFallbackChange}
                   onScroll={onEditorScroll}
-                  className="absolute inset-0 min-h-full w-full resize-none bg-transparent p-4 font-mono text-sm leading-6 tracking-normal text-transparent [font-variant-ligatures:none] caret-slate-950 outline-none selection:bg-cyan-200/40 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
+                  className="absolute inset-0 min-h-full w-full resize-none overflow-auto whitespace-pre bg-transparent p-4 font-mono text-sm leading-6 tracking-normal text-transparent [font-variant-ligatures:none] caret-slate-950 outline-none selection:bg-cyan-200/40 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.45)_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-white/30 [&::-webkit-scrollbar-thumb]:bg-white/45 [&::-webkit-scrollbar-thumb]:backdrop-blur-md [&::-webkit-scrollbar-thumb:hover]:bg-white/65"
                 />
               </div>
               <p className="mt-2 text-xs text-slate-700">

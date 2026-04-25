@@ -11,6 +11,50 @@ import {
 } from './dnaEditing';
 import type { DifferenceSummary, DiseaseDetail, Region, RegionData } from './types';
 
+const EDITOR_LINE_LENGTH = 64;
+
+function formatSequenceForEditor(sequence: string): string {
+  if (!sequence) return '';
+
+  const chunks: string[] = [];
+  for (let i = 0; i < sequence.length; i += EDITOR_LINE_LENGTH) {
+    chunks.push(sequence.slice(i, i + EDITOR_LINE_LENGTH));
+  }
+  return chunks.join('\n');
+}
+
+function clampRawCaret(rawIndex: number, sequenceLength: number): number {
+  return Math.max(0, Math.min(sequenceLength, rawIndex));
+}
+
+function rawIndexToEditorCaret(rawIndex: number, sequenceLength: number): number {
+  const clamped = clampRawCaret(rawIndex, sequenceLength);
+  if (clamped <= 0 || sequenceLength <= 0) return 0;
+
+  // Newlines are inserted only between chunks, never after the final chunk.
+  const maxLineBreaks = Math.floor((sequenceLength - 1) / EDITOR_LINE_LENGTH);
+  const lineBreaksBeforeCaret = Math.min(Math.floor(clamped / EDITOR_LINE_LENGTH), maxLineBreaks);
+  return clamped + lineBreaksBeforeCaret;
+}
+
+function editorCaretToRawIndex(editorIndex: number, sequenceLength: number): number {
+  if (editorIndex <= 0) return 0;
+
+  // Each complete displayed line is 64 bases plus one inserted newline.
+  // If the caret is on the newline itself or just after it, both positions map
+  // to the same raw boundary between two bases.
+  const rawIndex = editorIndex - Math.floor(editorIndex / (EDITOR_LINE_LENGTH + 1));
+  return clampRawCaret(rawIndex, sequenceLength);
+}
+
+function editorSelectionToRawRange(target: HTMLTextAreaElement, sequenceLength: number) {
+  const editorStart = target.selectionStart ?? 0;
+  const editorEnd = target.selectionEnd ?? editorStart;
+  const start = editorCaretToRawIndex(Math.min(editorStart, editorEnd), sequenceLength);
+  const end = editorCaretToRawIndex(Math.max(editorStart, editorEnd), sequenceLength);
+  return { start, end };
+}
+
 export function useRegionSequenceEditor(
   diseaseId: string | null,
   diseaseDetail: DiseaseDetail | null,
@@ -34,7 +78,9 @@ export function useRegionSequenceEditor(
   useLayoutEffect(() => {
     currentSequenceRef.current = currentSequence;
     if (pendingCaretRef.current == null || !textareaRef.current) return;
-    textareaRef.current.setSelectionRange(pendingCaretRef.current, pendingCaretRef.current);
+
+    const displayCaret = rawIndexToEditorCaret(pendingCaretRef.current, currentSequence.length);
+    textareaRef.current.setSelectionRange(displayCaret, displayCaret);
     pendingCaretRef.current = null;
   }, [currentSequence]);
 
@@ -60,7 +106,8 @@ export function useRegionSequenceEditor(
     if (typeof window === 'undefined') return;
     window.requestAnimationFrame(() => {
       if (pendingCaretRef.current !== caret || !textareaRef.current) return;
-      textareaRef.current.setSelectionRange(caret, caret);
+      const displayCaret = rawIndexToEditorCaret(caret, currentSequenceRef.current.length);
+      textareaRef.current.setSelectionRange(displayCaret, displayCaret);
       pendingCaretRef.current = null;
     });
   };
@@ -68,7 +115,11 @@ export function useRegionSequenceEditor(
   const armNativeEditGuard = (nextSequence: string, caret: number) => {
     const expiresAt = eventNow() + 450;
     beforeInputSuppressUntilRef.current = expiresAt;
-    nativeChangeGuardRef.current = { nextSequence, caret, expiresAt };
+    nativeChangeGuardRef.current = {
+      nextSequence,
+      caret: clampRawCaret(caret, nextSequence.length),
+      expiresAt,
+    };
   };
 
   const shouldSuppressBeforeInput = () => {
@@ -92,29 +143,36 @@ export function useRegionSequenceEditor(
     return guard;
   };
 
-  const reconcileNativeTextareaChange = (previous: string, nativeValue: string) => {
-    if (nativeValue === previous) {
-      return { next: previous, caret: Math.min(textareaRef.current?.selectionStart ?? 0, previous.length) };
+  const reconcileNativeTextareaChange = (
+    previous: string,
+    nativeDisplayValue: string,
+    nativeSelectionStart: number
+  ) => {
+    const nativeRawValue = normalizeBases(nativeDisplayValue);
+    const nativeRawCaret = editorCaretToRawIndex(nativeSelectionStart, nativeRawValue.length || previous.length);
+
+    if (nativeRawValue === previous) {
+      return { next: previous, caret: clampRawCaret(nativeRawCaret, previous.length) };
     }
 
     let prefix = 0;
-    const maxPrefix = Math.min(previous.length, nativeValue.length);
-    while (prefix < maxPrefix && previous[prefix] === nativeValue[prefix]) {
+    const maxPrefix = Math.min(previous.length, nativeRawValue.length);
+    while (prefix < maxPrefix && previous[prefix] === nativeRawValue[prefix]) {
       prefix += 1;
     }
 
     let suffix = 0;
     while (
       suffix < previous.length - prefix &&
-      suffix < nativeValue.length - prefix &&
-      previous[previous.length - 1 - suffix] === nativeValue[nativeValue.length - 1 - suffix]
+      suffix < nativeRawValue.length - prefix &&
+      previous[previous.length - 1 - suffix] === nativeRawValue[nativeRawValue.length - 1 - suffix]
     ) {
       suffix += 1;
     }
 
     const removedStart = prefix;
     const removedEnd = previous.length - suffix;
-    const insertedRaw = nativeValue.slice(prefix, nativeValue.length - suffix);
+    const insertedRaw = nativeRawValue.slice(prefix, nativeRawValue.length - suffix);
 
     if (insertedRaw.length > 0) {
       return overwriteSequence(previous, removedStart, removedEnd, insertedRaw);
@@ -127,15 +185,16 @@ export function useRegionSequenceEditor(
       };
     }
 
-    return { next: previous, caret: Math.min(textareaRef.current?.selectionStart ?? 0, previous.length) };
+    return { next: previous, caret: clampRawCaret(nativeRawCaret, previous.length) };
   };
 
   const commitSequence = (regionId: string, nextSequence: string, caret?: number | null) => {
+    const clampedCaret = caret == null ? null : clampRawCaret(caret, nextSequence.length);
     currentSequenceRef.current = nextSequence;
-    pendingCaretRef.current = caret ?? null;
+    pendingCaretRef.current = clampedCaret;
     setCurrentSequence(prev => {
       if (prev === nextSequence) {
-        applyCaretWhenSequenceDoesNotRerender(caret);
+        applyCaretWhenSequenceDoesNotRerender(clampedCaret);
       }
       return nextSequence;
     });
@@ -149,6 +208,7 @@ export function useRegionSequenceEditor(
     if (editedSequences[region.region_id]) {
       setSelectedRegion(region);
       setCurrentSequence(editedSequences[region.region_id]);
+      currentSequenceRef.current = editedSequences[region.region_id];
       return;
     }
 
@@ -162,6 +222,7 @@ export function useRegionSequenceEditor(
       setSnvSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
       setEditedSequences(prev => ({ ...prev, [region.region_id]: initialSeq }));
       setCurrentSequence(initialSeq);
+      currentSequenceRef.current = initialSeq;
       return;
     }
 
@@ -186,9 +247,11 @@ export function useRegionSequenceEditor(
       setSnvSequences(prev => ({ ...prev, [region.region_id]: snvSeq }));
       setEditedSequences(prev => ({ ...prev, [region.region_id]: initialSeq }));
       setCurrentSequence(initialSeq);
+      currentSequenceRef.current = initialSeq;
     } catch (err) {
       console.error('Error fetching region:', err);
       setCurrentSequence('시퀀스를 불러올 수 없습니다');
+      currentSequenceRef.current = '시퀀스를 불러올 수 없습니다';
     } finally {
       setIsRegionLoading(false);
     }
@@ -210,9 +273,8 @@ export function useRegionSequenceEditor(
   };
 
   // LOGIC: keyboard editing rules. Length is never changed; edits overwrite bases or set N.
-  // The textarea is controlled, but production browsers can still emit beforeinput/change
-  // around keydown. Guarding those native fallback events prevents duplicate bases and
-  // prevents invalid keys from advancing the caret.
+  // The textarea displays fixed-width chunks with inserted newlines for reliable hit-testing.
+  // All event selection positions are mapped back to raw sequence coordinates before editing.
   const handleEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!selectedRegion) return;
     if (event.nativeEvent.isComposing) return;
@@ -220,8 +282,7 @@ export function useRegionSequenceEditor(
     const regionId = selectedRegion.region_id;
     const sequence = currentSequenceRef.current;
     const target = event.currentTarget;
-    const start = target.selectionStart ?? 0;
-    const end = target.selectionEnd ?? start;
+    const { start, end } = editorSelectionToRawRange(target, sequence.length);
     const lowerKey = event.key.toLowerCase();
     const blockedKeys = new Set([
       'Shift', 'CapsLock', 'Alt', 'AltGraph', 'Control', 'Meta',
@@ -331,41 +392,49 @@ export function useRegionSequenceEditor(
     }
 
     const inputType = typeof nativeEvent.inputType === 'string' ? nativeEvent.inputType : '';
-
-    if (inputType === 'insertLineBreak') {
-      event.preventDefault();
-      return;
-    }
-
     const regionId = selectedRegion.region_id;
     const sequence = currentSequenceRef.current;
     const target = event.currentTarget;
-    const start = target.selectionStart ?? 0;
-    const end = target.selectionEnd ?? start;
+    const { start, end } = editorSelectionToRawRange(target, sequence.length);
+
+    if (inputType === 'insertLineBreak') {
+      event.preventDefault();
+      armNativeEditGuard(sequence, start);
+      commitSequence(regionId, sequence, start);
+      return;
+    }
 
     if (inputType.startsWith('delete')) {
       event.preventDefault();
 
       if (start !== end) {
-        commitSequence(regionId, replaceRangeWithNs(sequence, start, end), start);
+        const next = replaceRangeWithNs(sequence, start, end);
+        armNativeEditGuard(next, start);
+        commitSequence(regionId, next, start);
         return;
       }
 
       if (inputType.includes('Backward')) {
         if (start <= 0) {
+          armNativeEditGuard(sequence, start);
           commitSequence(regionId, sequence, start);
           return;
         }
         const pos = start - 1;
-        commitSequence(regionId, sequence.slice(0, pos) + 'N' + sequence.slice(pos + 1), pos);
+        const next = sequence.slice(0, pos) + 'N' + sequence.slice(pos + 1);
+        armNativeEditGuard(next, pos);
+        commitSequence(regionId, next, pos);
         return;
       }
 
       if (start >= sequence.length) {
+        armNativeEditGuard(sequence, start);
         commitSequence(regionId, sequence, start);
         return;
       }
-      commitSequence(regionId, sequence.slice(0, start) + 'N' + sequence.slice(start + 1), start);
+      const next = sequence.slice(0, start) + 'N' + sequence.slice(start + 1);
+      armNativeEditGuard(next, start);
+      commitSequence(regionId, next, start);
       return;
     }
 
@@ -374,12 +443,14 @@ export function useRegionSequenceEditor(
     const inserted = normalizeBases(nativeEvent.data || '');
     if (!inserted) {
       event.preventDefault();
+      armNativeEditGuard(sequence, start);
       commitSequence(regionId, sequence, start);
       return;
     }
 
     event.preventDefault();
     const { next, caret } = overwriteSequence(sequence, start, end, inserted);
+    armNativeEditGuard(next, caret);
     commitSequence(regionId, next, caret);
   };
 
@@ -390,8 +461,7 @@ export function useRegionSequenceEditor(
     const regionId = selectedRegion.region_id;
     const sequence = currentSequenceRef.current;
     const target = event.currentTarget;
-    const start = target.selectionStart ?? 0;
-    const end = target.selectionEnd ?? start;
+    const { start, end } = editorSelectionToRawRange(target, sequence.length);
     const pasted = normalizeBases(event.clipboardData.getData('text'));
 
     if (!pasted) {
@@ -415,7 +485,11 @@ export function useRegionSequenceEditor(
     }
 
     const sequence = currentSequenceRef.current;
-    const { next, caret } = reconcileNativeTextareaChange(sequence, event.target.value);
+    const { next, caret } = reconcileNativeTextareaChange(
+      sequence,
+      event.target.value,
+      event.target.selectionStart ?? 0
+    );
     commitSequence(selectedRegion.region_id, next, caret);
   };
 
@@ -441,6 +515,15 @@ export function useRegionSequenceEditor(
 
   const currentOriginalSequence = selectedRegion ? originalSequences[selectedRegion.region_id] || '' : '';
   const currentBaseSequence = selectedRegion ? baseSequenceForRegion(selectedRegion.region_id) : '';
+  const editorDisplaySequence = useMemo(
+    () => formatSequenceForEditor(currentSequence),
+    [currentSequence]
+  );
+  const editorDisplayOriginalSequence = useMemo(
+    () => formatSequenceForEditor(currentOriginalSequence),
+    [currentOriginalSequence]
+  );
+
   // LOGIC: compute live diff counts shown in the editor summary chips.
   const differenceSummary: DifferenceSummary = useMemo(() => {
     if (!selectedRegion || !currentOriginalSequence || !currentSequence) return { toReference: 0, toSeed: 0 };
@@ -461,6 +544,8 @@ export function useRegionSequenceEditor(
     snvSequences,
     currentSequence,
     currentOriginalSequence,
+    editorDisplaySequence,
+    editorDisplayOriginalSequence,
     differenceSummary,
     textareaRef,
     editorBackdropRef,
