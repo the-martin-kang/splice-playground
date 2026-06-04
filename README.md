@@ -93,8 +93,8 @@ Splice Playground models selected parts of the DNA–RNA–protein chain. To avo
 ## Step-by-Step Workflow
 
 ### STEP 1 — Select Mutant
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/09e3bae9-fe99-49d8-8058-ea15eca81f8f" />
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/fc206c54-27e9-4937-ad2f-d9f91315dfaf" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/09e3bae9-fe99-49d8-8058-ea15eca81f8f" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/fc206c54-27e9-4937-ad2f-d9f91315dfaf" />
 
 Users select a disease or mutation scenario from a curated database. Each entry is linked to a gene, transcript context, representative variant, and educational disease description.
 
