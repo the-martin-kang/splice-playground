@@ -18,7 +18,7 @@ This repository is developed as an **educational and research-oriented prototype
 | Team | AI Section 1, Team 4 |
 | Timeline | 2025.09 – 2026.07 |
 | Live demo | https://splice-playground.vercel.app |
-| Presentation / idea video | https://youtu.be/GtntQUcu39I |
+| Presentation / idea video | https://youtu.be/VYZAtL4y5Gg |
 | Keywords | AI Biology, Computational Biology, SpliceAI, AlphaFold, ColabFold, AlphaGenome, In Silico Biology |
 
 ---
