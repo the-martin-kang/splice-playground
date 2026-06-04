@@ -1,4 +1,5 @@
 # Splice Playground
+<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/ec2c8f7e-9940-4c04-965e-17bba3bb5bad" />
 
 > **Make your own mutant — an AI-powered in silico biology playground for exploring how genomic variants can propagate from DNA to RNA splicing and protein structure.**
 
@@ -130,10 +131,14 @@ The structure viewer supports:
 - structural similarity display,
 - reuse of cached or identical structures when available.
 
+<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/ed46d192-9727-4e8a-a3f8-c6d6e7d3bcfa" />
+<img width="885" height="729" alt="Image" src="https://github.com/user-attachments/assets/83d3ba04-e397-4cb5-9e98-977f7d6f6ef6" />
+
 ---
 
 ## System Architecture
-
+<img width="6499" height="1677" alt="Image" src="https://github.com/user-attachments/assets/75adf3b7-4866-45bc-8d6a-58faa3240423" />
+<img width="6558" height="2832" alt="Image" src="https://github.com/user-attachments/assets/5afef092-c91f-4e2f-835e-89aa2601186e" />
 ```text
 Frontend                         Public Backend                    GPU Worker
 Next.js / React / TypeScript      FastAPI / Python / Docker         ColabFold job runner
@@ -234,6 +239,7 @@ splice-playground/
 - Improve protein comparison metrics and visualization of structurally affected regions.
 
 ### Long-term: STEP5 Molecular Interaction Simulation
+<img width="5645" height="1730" alt="Image" src="https://github.com/user-attachments/assets/4ae7dcbc-cac3-4c65-b686-5da8dbf35d64" />
 
 A planned extension is **STEP5: Molecular Interaction Simulation**. Instead of stopping at protein structure comparison, STEP5 would ask whether the mutant protein preserves, loses, or gains interaction behavior.
 
