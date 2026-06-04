@@ -139,6 +139,7 @@ The structure viewer supports:
 ## System Architecture
 <img width="6499" height="1677" alt="Image" src="https://github.com/user-attachments/assets/75adf3b7-4866-45bc-8d6a-58faa3240423" />
 <img width="6558" height="2832" alt="Image" src="https://github.com/user-attachments/assets/5afef092-c91f-4e2f-835e-89aa2601186e" />
+
 ```text
 Frontend                         Public Backend                    GPU Worker
 Next.js / React / TypeScript      FastAPI / Python / Docker         ColabFold job runner
