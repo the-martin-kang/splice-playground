@@ -223,7 +223,7 @@ splice-playground/
 
 | Name | Role | Student ID | GitHub | Email |
 | :--: | :--: | :--: | :--: | :--: |
-| 강민준 | AI, DB<br>Team Leader | 202434712 | https://github.com/the-martin-kang | joontory20@naver.com |
+| 강민준 | AI, DB<br>Team Leader | 202434712 | https://github.com/the-martin-kang | mintory20@snu.ac.kr |
 | 남윤정 | Frontend | 202334455 | https://github.com/Southernyj | namyj26@naver.com |
 | 이정균 | Backend | 202135814 | https://github.com/Junggyun827 | jungun0827@gmail.com |
 | 김현우 | PPT 자료조사| 202239868 | https://github.com/hyunw0000 | lukert@gachon.ac.kr |
