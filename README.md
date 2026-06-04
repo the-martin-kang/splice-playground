@@ -99,8 +99,8 @@ Splice Playground models selected parts of the DNA–RNA–protein chain. To avo
 Users select a disease or mutation scenario from a curated database. Each entry is linked to a gene, transcript context, representative variant, and educational disease description.
 
 ### STEP 2 — Manipulate DNA
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/3773e4e4-9fcc-4e06-ba04-5e6a30323bab" />
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/83b3740e-9aef-447c-b9c5-f1a4e422ec01" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/3773e4e4-9fcc-4e06-ba04-5e6a30323bab" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/83b3740e-9aef-447c-b9c5-f1a4e422ec01" />
 
 Users edit a selected DNA region under a strict fixed-length overwrite policy:
 
@@ -112,7 +112,7 @@ Users edit a selected DNA region under a strict fixed-length overwrite policy:
 This design is intentionally different from a normal text editor. It protects the biological coordinate system while still allowing users to create custom mutant sequences.
 
 ### STEP 3 — Mature mRNA
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/00d0987c-dd8a-4229-b8db-b0c16445f1f4" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/00d0987c-dd8a-4229-b8db-b0c16445f1f4" />
 
 The backend predicts how sequence edits affect splice donor and acceptor signals. The result is converted into transcript-level interpretations such as:
 
@@ -125,9 +125,9 @@ The backend predicts how sequence edits affect splice donor and acceptor signals
 The user sees these outcomes as exon-level visual blocks rather than raw model scores alone.
 
 ### STEP 4 — Protein Structure
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/0bc1acc0-fc99-46ed-8f26-ee7eba891c81" />
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/c21a0b8a-ad18-419d-93d5-1b66f652c3af" />
-<img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/e48738a9-9a50-4bac-9fb4-c445678c109a" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/0bc1acc0-fc99-46ed-8f26-ee7eba891c81" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/c21a0b8a-ad18-419d-93d5-1b66f652c3af" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/e48738a9-9a50-4bac-9fb4-c445678c109a" />
 
 The platform translates the interpreted mRNA into a protein sequence and compares the user-generated protein with the baseline protein.
 
