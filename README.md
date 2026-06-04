@@ -289,6 +289,7 @@ These limitations are not treated as failures of the project. They define the bo
 9. Mirdita, M. / sokrypton. ColabFold repository. https://github.com/sokrypton/ColabFold
 10. Google DeepMind. AlphaFold 3 inference pipeline. https://github.com/google-deepmind/alphafold3
 11. Open Targets Platform documentation. https://platform-docs.opentargets.org/
+12. Youngoh Kim, Sun Kim, _et al._ MixingDTA: improved drug–target affinity prediction by extending mixup with guilt-by-association, _Bioinformatics_ **41**, i105–i114 (2025). https://doi.org/10.1093/bioinformatics/btaf238
 
 ---
 
