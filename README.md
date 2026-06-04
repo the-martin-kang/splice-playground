@@ -1,7 +1,7 @@
 # Splice Playground
+> **Make your own mutant — an AI-powered in silico biology playground for exploring how genomic variants can propagate from DNA to RNA splicing and protein structure.**
 <img width="1147" height="719" alt="Image" src="https://github.com/user-attachments/assets/ec2c8f7e-9940-4c04-965e-17bba3bb5bad" />
 
-> **Make your own mutant — an AI-powered in silico biology playground for exploring how genomic variants can propagate from DNA to RNA splicing and protein structure.**
 
 Splice Playground is a one-year capstone project from the **Department of AI–Software, Gachon University**. The project aims to make modern computational biology more accessible by turning a complex biological workflow — variant selection, DNA sequence editing, splicing prediction, mature mRNA reconstruction, and protein structure comparison — into an interactive web-based learning environment.
 
