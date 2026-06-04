@@ -126,8 +126,8 @@ The user sees these outcomes as exon-level visual blocks rather than raw model s
 
 ### STEP 4 — Protein Structure
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/0bc1acc0-fc99-46ed-8f26-ee7eba891c81" />
-<img width="500" alt="Image" src="https://github.com/user-attachments/assets/c21a0b8a-ad18-419d-93d5-1b66f652c3af" />
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/e48738a9-9a50-4bac-9fb4-c445678c109a" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/c21a0b8a-ad18-419d-93d5-1b66f652c3af" />
 
 The platform translates the interpreted mRNA into a protein sequence and compares the user-generated protein with the baseline protein.
 
